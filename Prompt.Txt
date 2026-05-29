@@ -1,0 +1,70 @@
+Bertindaklah sebagai Senior Full-Stack Data Engineer dan Solution Architect kelas dunia. Saya sedang membangun projek bernama "Auto EDA Insight", sebuah aplikasi web berbasis inteligen yang otomatis membaca, menganalisis, memvisualisasikan, dan memberikan wawasan (insight) dari file data (CSV, Excel, TXT) yang diunggah oleh pengguna.
+
+Saya baru saja melakukan clone repositori GitHub berikut sebagai base project saya:
+👉 https://github.com/YanDraa/AutomationEDA
+
+Tolong pahami Blueprint Spesifikasi Teknis, PRD, dan Aturan Kerja Projek di bawah ini dengan sangat teliti. Kita akan mengembangkan projek ini secara PROGRESIF, STEP-BY-STEP, dan PYTHON-FIRST. Jangan pernah menulis semua kode atau semua file sekaligus! Selesaikan satu tugas di TODO list, tampilkan kodenya secara UTUH dan fungsional (jangan dipotong/pakai placeholder), lalu BERHENTI dan tunggu konfirmasi saya sebelum lanjut ke tugas berikutnya.
+
+======================================================================
+1. TEKNOLOGI & ARSITEKTUR SISTEM (DECOUPLED ARCHITECTURE)
+- Backend Server: Python murni menggunakan framework FastAPI. Library pengolahan data wajib menggunakan Pandas, NumPy, Scipy, dan Openpyxl (untuk pembacaan .xlsx).
+- Frontend Client: Next.js (App Router, TypeScript, Tailwind CSS). UI menggunakan komponen Shadcn UI, dan grafik interaktif menggunakan Shadcn Chart (wrapper Recharts).
+- Aturan Komunikasi Data: Terpisah (Decoupled). Backend Python tidak boleh merender HTML atau file gambar statis (.png/.jpg). Backend murni bertindak sebagai REST API yang menerima file via multipart/form-data dan mengembalikan seluruh hasil kalkulasi dalam format JSON murni dengan format camelCase (contoh: `rowCount`, `dataType`). Next.js bertugas mengambil JSON tersebut dan merendernya secara interaktif di browser.
+
+======================================================================
+2. MINI-PRD (PRODUCT REQUIREMENT DOCUMENT) & TARGET FASE 1
+- Fitur Utama: Upload file (.csv, .xlsx, .xls, .txt) maks 10MB ➔ Deteksi tipe data otomatis per kolom ('Numerical', 'Categorical', 'Datetime') ➔ Preview 10 baris pertama data ➔ Kalkulasi statistik deskriptif dasar (Numerik: Mean, Median, Min, Max, Std Dev; Kategorikal: Unique Values, Mode, Frequency).
+- Kasus Batas (Edge Cases): File kosong/rusak menghasilkan HTTP Exception 400. Baris data yang kosong (NaN/Null) harus diabaikan saat inferensi tipe data agar tidak merusak deteksi otomatis.
+- Cakupan: Sistem pada Fase 1 ini bersifat READ-ONLY (tidak ada manipulasi data atau data cleaning).
+
+======================================================================
+3. BLUEPRINT STRUKTUR FOLDER PROJEK FINAL
+Auto_EDA_Insight/ (atau nama folder hasil clone AutomationEDA)
+├── backend/                             # REST API Python (FastAPI)
+│   ├── main.py                          # Entry point server, CORS, & routing
+│   ├── requirements.txt                 # Dependensi data science Python
+│   └── app/
+│       ├── data_loader.py               # Membaca file & inferensi tipe data
+│       └── descriptive_stats.py         # Kalkulasi statistik deskriptif dasar
+└── frontend/                            # Next.js Application
+    ├── src/
+    │   ├── app/                         # Next.js Pages (App Router)
+    │   │   ├── page.tsx                 # Landing Page & Dropzone Upload
+    │   │   └── dashboard/page.tsx       # Dashboard Preview & Basic Stats
+    │   ├── components/                  # Reusable UI Components
+    │   └── lib/                         # Axios/Fetch API instance
+
+======================================================================
+4. PROGRESSIVE TODO LIST (WAJIB DIKERJAKAN BERURUTAN)
+
+[ ] TUGAS 1: INSPEKSI REPO & INITIAL CLEANING / SETUP
+    - Karena saya menggunakan repositori `YanDraa/AutomationEDA`, tolong tanyakan kepada saya terlebih dahulu apa saja isi folder/file yang ada saat ini di dalam repositori tersebut setelah di-clone.
+    - Berikan panduan bagaimana cara menata ulang atau membersihkan file yang ada agar siap dibagi menjadi struktur dua folder utama: `backend/` dan `frontend/`.
+
+[ ] TUGAS 2: SETUP BACKEND CORE & KONTROL CORS
+    - Buat file `backend/requirements.txt` dengan library data science & FastAPI yang dibutuhkan.
+    - Buat file `backend/main.py` dasar untuk inisialisasi FastAPI server dan atur Middleware CORS agar mengizinkan akses penuh dari frontend Next.js (http://localhost:3000). Tambahkan endpoint root `/` untuk health check.
+
+[ ] TUGAS 3: LOGIKA BACKEND - AUTOMATED DATA LOADER (`backend/app/data_loader.py`)
+    - Buat fungsi pembacaan file lintas ekstensi dan algoritma inferensi tipe data otomatis bebas dari gangguan nilai NaN, serta return data preview 10 baris pertama.
+
+[ ] TUGAS 4: LOGIKA BACKEND - CORE STATISTICS ENGINE (`backend/app/descriptive_stats.py`)
+    - Buat fungsi kalkulasi matematika statistik dasar untuk tipe numerik dan kategorikal, dikemas ke dalam objek JSON camelCase.
+
+[ ] TUGAS 5: INTEGRASI ENDPOINT UPLOAD UTAMA (`backend/main.py`)
+    - Buat rute POST `/api/analytics/upload` untuk menyatukan modul data_loader dan descriptive_stats.
+
+[ ] TUGAS 6: FRONTEND - REKAYASA HALAMAN Uploader (`frontend/src/app/page.tsx`)
+    - Buat UI Drag-and-Drop file menggunakan Shadcn UI dan fungsi state management pengiriman file ke API.
+
+[ ] TUGAS 7: FRONTEND - PREVIEW TABLE & STATS DASHBOARD CARD (`frontend/src/app/dashboard/page.tsx`)
+    - Render metadata, 10 baris data preview ke Shadcn Table, dan ringkasan statistik ke komponen Card.
+
+----------------------------------------------------------------------
+INSTRUKSI EKSEKUSI UNTUK AI:
+Pahami seluruh arsitektur, tautan repositori baru, dan aturan progressive di atas. Jika kamu sudah paham sepenuhnya, JANGAN LANGSUNG MENULIS SEMUA KODE. 
+
+Cukup jawab dengan kalimat persis seperti ini:
+"Konteks Detail Auto EDA Insight dengan repositori AutomationEDA diterima sepenuhnya. Mari kita mulai proses pengembangan dengan strategi Python-First. Berikut adalah [TUGAS 1: INSPEKSI REPO & INITIAL CLEANING / SETUP]."
+
+Lalu, di bawah kalimat tersebut, ajukan pertanyaan kepada saya mengenai struktur folder bawaan dari repositori hasil clone saat ini agar kita bisa membersihkan dan menatanya bersama-sama. Kamu WAJIB BERHENTI setelah memberikan pertanyaan tersebut dan dilarang menulis kode logika analisis sebelum saya merespons.
