@@ -19,7 +19,6 @@ import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { NavMain } from "./nav-main";
-import { SidebarSupportCard } from "./sidebar-support-card";
 
 const _data = {
   navSecondary: [
@@ -122,7 +121,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter className="flex flex-col gap-3">
-        <SidebarSupportCard />
         <DatasetInformationCard />
       </SidebarFooter>
     </Sidebar>
