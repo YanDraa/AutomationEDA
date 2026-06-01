@@ -15,12 +15,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
-import { rootUser } from "@/data/users";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
 import { SidebarSupportCard } from "./sidebar-support-card";
 
 const _data = {
@@ -60,6 +58,36 @@ const _data = {
   ],
 };
 
+function DatasetInformationCard() {
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="text-sm font-semibold">Dataset Information</div>
+      <div className="mt-3 grid gap-2 text-sm">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">File Name</span>
+          <span>placeholder.csv</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Rows</span>
+          <span>1000</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Columns</span>
+          <span>20</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Upload Time</span>
+          <span>2026-01-01 10:00</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">File Size</span>
+          <span>1.2 MB</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
@@ -86,14 +114,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
       <SidebarContent>
         <NavMain items={sidebarItems} />
         {/* <NavDocuments items={data.documents} /> */}
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
-      <SidebarFooter>
+
+      <SidebarFooter className="flex flex-col gap-3">
         <SidebarSupportCard />
-        <NavUser user={rootUser} />
+        <DatasetInformationCard />
       </SidebarFooter>
     </Sidebar>
   );

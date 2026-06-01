@@ -1,22 +1,19 @@
+import type { LucideIcon } from "lucide-react";
 import {
-  Banknote,
-  Calendar,
-  ChartBar,
-  Fingerprint,
-  Forklift,
-  Gauge,
-  GraduationCap,
-  Kanban,
+  BarChart2,
+  BarChartBig,
+  Boxes,
+  Download,
+  FileText,
+  FolderOpen,
   LayoutDashboard,
-  ListTodo,
-  Lock,
-  type LucideIcon,
-  Mail,
-  MessageSquare,
-  ReceiptText,
-  ShoppingBag,
-  SquareArrowUpRight,
-  Users,
+  PieChart,
+  Radar,
+  Settings,
+  Sparkles,
+  Table,
+  TrendingUp,
+  Upload,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -47,133 +44,81 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: "Dashboards",
+    label: "Main",
     items: [
       {
-        title: "Default",
-        url: "/dashboard/default",
+        title: "Dashboard",
+        url: "/main/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: "CRM",
-        url: "/dashboard/crm",
-        icon: ChartBar,
+        title: "Upload Data",
+        url: "/main/upload-data",
+        icon: Upload,
       },
       {
-        title: "Finance",
-        url: "/dashboard/finance",
-        icon: Banknote,
+        title: "Data Preview",
+        url: "/main/data-preview",
+        icon: Table,
       },
       {
-        title: "Analytics",
-        url: "/dashboard/analytics",
-        icon: Gauge,
-      },
-      {
-        title: "Productivity",
-        url: "/dashboard/productivity",
-        icon: ListTodo,
-      },
-      {
-        title: "E-commerce",
-        url: "/dashboard/ecommerce",
-        icon: ShoppingBag,
-      },
-      {
-        title: "Academy",
-        url: "/dashboard/academy",
-        icon: GraduationCap,
-        isNew: true,
-      },
-      {
-        title: "Logistics",
-        url: "/dashboard/logistics",
-        icon: Forklift,
-      },
-    ],
-  },
-  {
-    id: 2,
-    label: "Pages",
-    items: [
-      {
-        title: "Email",
-        url: "/dashboard/mail",
-        icon: Mail,
-      },
-      {
-        title: "Chat",
-        url: "/dashboard/coming-soon",
-        icon: MessageSquare,
-        comingSoon: true,
-      },
-      {
-        title: "Calendar",
-        url: "/dashboard/coming-soon",
-        icon: Calendar,
-        comingSoon: true,
-      },
-      {
-        title: "Kanban",
-        url: "/dashboard/coming-soon",
-        icon: Kanban,
-        comingSoon: true,
-      },
-      {
-        title: "Invoice",
-        url: "/dashboard/coming-soon",
-        icon: ReceiptText,
-        comingSoon: true,
-      },
-      {
-        title: "Users",
-        url: "/dashboard/users",
-        icon: Users,
-      },
-      {
-        title: "Roles",
-        url: "/dashboard/coming-soon",
-        icon: Lock,
-        comingSoon: true,
-      },
-      {
-        title: "Authentication",
-        url: "/auth",
-        icon: Fingerprint,
+        title: "Descriptive Statistics",
+        url: "/main/descriptive-statistics",
+        icon: PieChart,
         subItems: [
-          { title: "Login v1", url: "/auth/v1/login", newTab: true },
-          { title: "Login v2", url: "/auth/v2/login", newTab: true },
-          { title: "Register v1", url: "/auth/v1/register", newTab: true },
-          { title: "Register v2", url: "/auth/v2/register", newTab: true },
+          {
+            title: "Numerical",
+            url: "/main/descriptive-statistics/numerical",
+          },
+          {
+            title: "Categorical",
+            url: "/main/descriptive-statistics/categorical",
+          },
         ],
       },
-    ],
-  },
-  {
-    id: 3,
-    label: "Legacy",
-    items: [
       {
-        title: "Dashboards",
-        url: "/dashboard/default-v1",
+        title: "Visualizations",
+        url: "/main/visualizations",
+        icon: BarChart2,
         subItems: [
-          { title: "Default V1", url: "/dashboard/default-v1" },
-          { title: "CRM V1", url: "/dashboard/crm-v1" },
-          { title: "Finance V1", url: "/dashboard/finance-v1" },
-          { title: "Analytics V1", url: "/dashboard/analytics-v1" },
+          {
+            title: "Univariate",
+            url: "/main/visualizations/univariate",
+          },
+          {
+            title: "Bivariate",
+            url: "/main/visualizations/bivariate",
+          },
+          {
+            title: "Multivariate",
+            url: "/main/visualizations/multivariate",
+          },
+          {
+            title: "Time Series",
+            url: "/main/visualizations/time-series",
+            isNew: true,
+          },
         ],
       },
-    ],
-  },
-  {
-    id: 4,
-    label: "Misc",
-    items: [
       {
-        title: "Others",
-        url: "/dashboard/coming-soon",
-        icon: SquareArrowUpRight,
-        comingSoon: true,
+        title: "Interpretation",
+        url: "/main/interpretation",
+        icon: Sparkles,
+      },
+      {
+        title: "Reports",
+        url: "/main/reports",
+        icon: FileText,
+      },
+      {
+        title: "Download",
+        url: "/main/download",
+        icon: Download,
+      },
+      {
+        title: "Settings",
+        url: "/main/settings",
+        icon: Settings,
       },
     ],
   },
