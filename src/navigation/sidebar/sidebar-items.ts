@@ -1,18 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart2,
-  BarChartBig,
-  Boxes,
   Download,
   FileText,
-  FolderOpen,
   LayoutDashboard,
   PieChart,
-  Radar,
   Settings,
   Sparkles,
   Table,
-  TrendingUp,
   Upload,
 } from "lucide-react";
 
