@@ -36,87 +36,83 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
+// ✅ Definisikan prefix sekali di sini
+const BASE = "/dashboard";
+
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
     label: "Main",
     items: [
       {
-          title: "Dashboard",
-        url: "/dashboard",
+        title: "Dashboard",
+        url: BASE,
         icon: LayoutDashboard,
       },
       {
         title: "Upload Data",
-        url: "/upload-data",
+        url: `${BASE}/upload-data`,
         icon: Upload,
       },
       {
         title: "Data Preview",
-        url: "/data-preview",
+        url: `${BASE}/data-preview`,
         icon: Table,
       },
       {
         title: "Descriptive Statistics",
-        url: "/descriptive-statistics",
+        url: `${BASE}/descriptive-statistics`,
         icon: PieChart,
         subItems: [
           {
             title: "Numerical",
-            url: "/descriptive-statistics/numerical",
+            url: `${BASE}/descriptive-statistics/numerical`,
           },
           {
             title: "Categorical",
-            url: "/descriptive-statistics/categorical",
+            url: `${BASE}/descriptive-statistics/categorical`,
           },
         ],
       },
       {
         title: "Visualizations",
-        url: "/visualizations",
+        url: `${BASE}/visualizations`,
         icon: BarChart2,
         subItems: [
           {
             title: "Univariate",
-            url: "/visualizations/univariate",
+            url: `${BASE}/visualizations/univariate`,
           },
           {
             title: "Bivariate",
-            url: "/visualizations/bivariate",
+            url: `${BASE}/visualizations/bivariate`,
           },
           {
             title: "Multivariate",
-            url: "/visualizations/multivariate",
+            url: `${BASE}/visualizations/multivariate`,
           },
           {
             title: "Time Series",
-            url: "/visualizations/time-series",
+            url: `${BASE}/visualizations/time-series`,
             isNew: true,
           },
         ],
       },
       {
         title: "Interpretation",
-        url: "/interpretation",
+        url: `${BASE}/interpretation`,
         icon: Sparkles,
       },
       {
         title: "Reports",
-        url: "/reports",
+        url: `${BASE}/reports`,
         icon: FileText,
       },
       {
         title: "Download",
-        url: "/download",
+        url: `${BASE}/download`,
         icon: Download,
-      },
-      {
-        title: "Settings",
-        url: "/settings",
-        icon: Settings,
       },
     ],
   },
 ];
-
-

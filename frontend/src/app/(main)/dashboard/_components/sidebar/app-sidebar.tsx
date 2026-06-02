@@ -30,31 +30,32 @@ function DatasetInformationCard() {
       <div className="font-semibold text-sm">Dataset Information</div>
 
       {!dataset ? (
-        <div className="mt-3 rounded-md border border-dashed bg-muted/30 p-3 text-muted-foreground text-sm">
-
-          No files uploaded yet
+        <div className="mt-3 rounded-md border border-dashed bg-muted/30 p-3 text-center text-muted-foreground text-xs">
+          Belum ada file yang di upload
         </div>
       ) : (
         <div className="mt-3 grid gap-2 text-sm">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">File Name</span>
-            <span className="max-w-[10rem] truncate">{dataset.fileName}</span>
+          <div className="flex items-start justify-between gap-4">
+            <span className="shrink-0 text-muted-foreground">File Name</span>
+            <span className="max-w-[10rem] truncate text-right font-medium" title={dataset.fileName}>
+              {dataset.fileName}
+            </span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">Rows</span>
-            <span>{dataset.rows}</span>
+            <span className="font-medium">{dataset.rows.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">Columns</span>
-            <span>{dataset.columns}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">Upload Time</span>
-            <span className="max-w-[10rem] truncate">{dataset.uploadTime}</span>
+            <span className="font-medium">{dataset.columns}</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">File Size</span>
-            <span>{dataset.fileSize}</span>
+            <span className="font-medium">{dataset.fileSize}</span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <span className="shrink-0 text-muted-foreground">Upload Time</span>
+            <span className="max-w-[10rem] text-right font-medium">{dataset.uploadTime}</span>
           </div>
         </div>
       )}
@@ -80,7 +81,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link prefetch={false} href="/main/dashboard">
+              {/* ✅ Fix: /main/dashboard → /dashboard */}
+              <Link prefetch={false} href="/dashboard">
                 <Command />
                 <span className="font-semibold text-base">{APP_CONFIG.name}</span>
               </Link>
@@ -99,4 +101,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   );
 }
-

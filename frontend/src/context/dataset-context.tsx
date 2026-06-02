@@ -20,18 +20,14 @@ type DatasetContextValue = {
 
 const DatasetContext = createContext<DatasetContextValue | undefined>(undefined);
 
-function _formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** i;
-
-  return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
-
 function toUploadTimeString(d: Date): string {
-  return d.toISOString().replace("T", " ").replace(".000Z", "Z");
+  const day = String(d.getDate()).padStart(2, "0");
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${day} ${month} ${year} ${hours}:${minutes}`;
 }
 
 export function DatasetProvider({ children }: { children: React.ReactNode }) {
@@ -51,7 +47,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
       setDataset,
       clearDataset,
     }),
-    [dataset, setDataset, clearDataset]
+    [dataset, setDataset, clearDataset],
   );
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
@@ -64,8 +60,6 @@ export function useDataset() {
 }
 
 export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> {
-  // Kept name to avoid changing call sites.
-  // This version makes real calls to FastAPI so you can test end-to-end in the browser.
   const now = new Date();
   const form = new FormData();
   form.append("file", file);
@@ -100,9 +94,7 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
     fileName: data.metadata.fileName,
     rows: data.metadata.rows,
     columns: data.metadata.columns,
-    uploadTime: toUploadTimeString(now),
     fileSize: data.metadata.fileSize,
+    uploadTime: toUploadTimeString(now),
   };
 }
-
-
