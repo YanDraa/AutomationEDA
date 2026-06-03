@@ -2,6 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { useRouter } from "next/navigation";
+
+
 import { CheckCircle2, FileSpreadsheet, Trash2, Upload, UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,7 @@ import {
 } from "@/context/dataset-context";
 
 export default function Page() {
+  const router = useRouter();
   const { setDataset, clearDataset, dataset } = useDataset();
   const [isParsing, setIsParsing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -37,6 +41,10 @@ export default function Page() {
         const result: DatasetInfo = await simulateDatasetFromFile(file);
         setDataset(result);
         setSuccessFile(file.name);
+
+        // After upload, auto-navigate to preview page
+        router.push("/dashboard/data-preview");
+
       } catch (_e) {
         setError("Gagal membaca file. Pastikan backend berjalan di localhost:8000 dan coba lagi.");
       } finally {

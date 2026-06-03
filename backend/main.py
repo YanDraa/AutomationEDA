@@ -7,8 +7,49 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 import scipy.stats as scipy_stats
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from typing import Optional
+
+
 from fastapi.middleware.cors import CORSMiddleware
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
+RAW_DIR = DATA_DIR / "raw"
+RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+ACTIVE_DATASET_PKL = RAW_DIR / "active_dataset.pkl"
+ACTIVE_DATASET_META_JSON = RAW_DIR / "active_dataset_meta.json"
+
+
+def _load_active_dataset_df() -> pd.DataFrame:
+    if not ACTIVE_DATASET_PKL.exists():
+        raise HTTPException(
+            status_code=400,
+            detail="No active dataset on server. Please upload data first via /api/upload.",
+        )
+    return pd.read_pickle(ACTIVE_DATASET_PKL)
+
+
+def _persist_metadata(*, file_name: str, df: pd.DataFrame, raw_size_bytes: int, original_filename: str | None = None) -> None:
+    import json
+    from datetime import datetime, timezone
+
+    payload = {
+        "fileName": file_name,
+        "originalFilename": original_filename or file_name,
+        "rows": int(len(df)),
+        "columns": int(len(df.columns)),
+        "fileSize": _format_file_size(int(raw_size_bytes)),
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+
 
 
 # -----------------------------
@@ -196,6 +237,76 @@ def describe_numeric(df: pd.DataFrame) -> Dict[str, Any]:
     return {"table": sanitize_obj(pd.DataFrame(results).T)}
 
 
+def _manual_covariance(x: pd.Series, y: pd.Series) -> float:
+    x_arr = x.to_numpy(dtype=float)
+    y_arr = y.to_numpy(dtype=float)
+    n = len(x_arr)
+    if n < 2:
+        return 0.0
+    mean_x = x_arr.mean()
+    mean_y = y_arr.mean()
+    return float(np.sum((x_arr - mean_x) * (y_arr - mean_y)) / (n - 1))
+
+
+def _manual_pearson(x: pd.Series, y: pd.Series) -> float:
+    x_arr = x.to_numpy(dtype=float)
+    y_arr = y.to_numpy(dtype=float)
+    n = len(x_arr)
+    if n < 2:
+        return 0.0
+    mean_x = x_arr.mean()
+    mean_y = y_arr.mean()
+    numerator = float(np.sum((x_arr - mean_x) * (y_arr - mean_y)))
+    std_x = float((np.sum((x_arr - mean_x) ** 2) / (n - 1)) ** 0.5)
+    std_y = float((np.sum((y_arr - mean_y) ** 2) / (n - 1)) ** 0.5)
+    if std_x == 0 or std_y == 0:
+        return 0.0
+    return numerator / ((n - 1) * std_x * std_y)
+
+
+def _manual_cramers_v(x: pd.Series, y: pd.Series) -> float:
+    table = pd.crosstab(x.fillna("NA"), y.fillna("NA"))
+    chi2 = float(__import__("scipy").stats.chi2_contingency(table)[0])
+    n = float(table.values.sum())
+    r, k = table.shape
+    denom = n * (min(r, k) - 1)
+    if denom == 0:
+        return 0.0
+    return float(np.sqrt(chi2 / denom))
+
+
+def association_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    num_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    cat_cols = df.select_dtypes(include=["object", "string"]).columns.tolist()
+
+    cov_mat = pd.DataFrame(np.zeros((len(num_cols), len(num_cols))), index=num_cols, columns=num_cols)
+    for i, c1 in enumerate(num_cols):
+        for j, c2 in enumerate(num_cols):
+            valid = df[[c1, c2]].dropna()
+            if valid.empty:
+                cov_mat.iloc[i, j] = 0.0
+            else:
+                cov_mat.iloc[i, j] = round(_manual_covariance(valid[c1], valid[c2]), 4)
+
+    pearson_mat = pd.DataFrame(np.zeros((len(num_cols), len(num_cols))), index=num_cols, columns=num_cols)
+    for i, c1 in enumerate(num_cols):
+        for j, c2 in enumerate(num_cols):
+            valid = df[[c1, c2]].dropna()
+            if valid.empty:
+                pearson_mat.iloc[i, j] = 0.0
+            else:
+                pearson_mat.iloc[i, j] = round(_manual_pearson(valid[c1], valid[c2]), 4)
+
+    cramers_mat = pd.DataFrame(np.eye(len(cat_cols)), index=cat_cols, columns=cat_cols)
+    for i, c1 in enumerate(cat_cols):
+        for j in range(i + 1, len(cat_cols)):
+            v = round(_manual_cramers_v(df[c1], df[cat_cols[j]]), 4)
+            cramers_mat.iloc[i, j] = v
+            cramers_mat.iloc[j, i] = v
+
+    return cov_mat, pearson_mat, cramers_mat
+
+
 def describe_categorical(df: pd.DataFrame) -> Dict[str, Any]:
     cat_cols = df.select_dtypes(include=["object", "string"]).columns
     results: Dict[str, Dict[str, Any]] = {}
@@ -292,8 +403,56 @@ app.add_middleware(
 )
 
 
+def _latest_uploaded_file_path() -> Path | None:
+    """Return most recently modified supported file in RAW_DIR."""
+    if not RAW_DIR.exists():
+        return None
+
+    candidates = []
+    for p in RAW_DIR.iterdir():
+        if p.is_file() and p.suffix.lower() in {".csv", ".txt", ".xlsx", ".xls"}:
+            candidates.append(p)
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    return candidates[0]
+
+
+@app.get("/api/current-dataset")
+async def current_dataset() -> Dict[str, Any]:
+    # Check if persisted pickle exists
+    if not ACTIVE_DATASET_PKL.exists():
+        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
+
+    # Load persisted DataFrame (keeps dtypes)
+    df = pd.read_pickle(ACTIVE_DATASET_PKL)
+
+    # Try to provide file metadata from latest raw file (best-effort)
+    path = _latest_uploaded_file_path()
+    raw_size = path.stat().st_size if path and path.exists() else 0
+    file_name = path.name if path else "active_dataset.pkl"
+
+    preview_data = build_dataset_preview(df, n_head=10)
+
+    return {
+        "status": "success",
+        "dataset": {
+            "fileName": file_name,
+            "rows": int(len(df)),
+            "columns": int(len(df.columns)),
+            "fileSize": _format_file_size(int(raw_size)),
+            "uploadTime": "",
+        },
+        "preview": preview_data,
+    }
+
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
+
     filename = file.filename or ""
     lower = filename.lower()
 
@@ -309,67 +468,95 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
         )
 
     try:
-        # ✅ Fix: baca file SEKALI saja — df dan raw bytes dari sumber yang sama
+        # Baca file SEKALI
         df, raw = read_dataframe_and_raw(file)
+
+        # Persist uploaded raw file permanently into backend/data/raw
+        safe_name = os.path.basename(filename)
+        save_path = RAW_DIR / safe_name
+        with save_path.open("wb") as f:
+            f.write(raw)
+
+        # Persist active dataset dataframe (pickle)
+        # - keep auto-detected dtypes by pickling the DataFrame
+        df.to_pickle(ACTIVE_DATASET_PKL)
+
+        _persist_metadata(
+            file_name=safe_name,
+            df=df,
+            raw_size_bytes=len(raw),
+            original_filename=file.filename,
+        )
 
         return {
             "status": "success",
             "metadata": {
-                "fileName": filename,
+                "fileName": safe_name,
                 "rows": int(len(df)),
                 "columns": int(len(df.columns)),
-                "fileSize": _format_file_size(len(raw)),  # ✅ Fix: tidak lagi 0 B
+                "fileSize": _format_file_size(len(raw)),
             },
         }
+
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
 
 
 @app.post("/api/preview")
-async def preview(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """
-    Endpoint baru: dataset preview.
-    Mengembalikan info kolom (nama, tipe, missing),
-    sample 10 baris pertama, dan total rows/columns.
-    """
-    filename = file.filename or ""
-    lower = filename.lower()
+async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+    if file is not None and file.filename:
+        filename = file.filename
+        lower = (filename or "").lower()
+        if not (
+            lower.endswith(".csv")
+            or lower.endswith(".xlsx")
+            or lower.endswith(".xls")
+            or lower.endswith(".txt")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
+            )
 
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+        df, raw = read_dataframe_and_raw(file)
+        safe_name = os.path.basename(filename)
+        save_path = RAW_DIR / safe_name
+        with save_path.open("wb") as f:
+            f.write(raw)
 
-    try:
-        df, _ = read_dataframe_and_raw(file)
+        df.to_pickle(ACTIVE_DATASET_PKL)
+        _persist_metadata(
+            file_name=safe_name,
+            df=df,
+            raw_size_bytes=len(raw),
+            original_filename=filename,
+        )
+
         preview_data = build_dataset_preview(df, n_head=10)
         return {"status": "success", "result": preview_data}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+    # Fallback: load cached dataset
+    df = _load_active_dataset_df()
+    preview_data = build_dataset_preview(df, n_head=10)
+    return {"status": "success", "result": preview_data}
+
+
+# Use GET /api/current-dataset (includes preview) instead.
+
+
 
 
 @app.post("/api/analysis/numeric")
-async def analysis_numeric(file: UploadFile = File(...)) -> Dict[str, Any]:
-    filename = file.filename or ""
-    lower = filename.lower()
-
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+    if not ACTIVE_DATASET_PKL.exists():
+        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
 
     try:
-        df, _ = read_dataframe_and_raw(file)
+        df = pd.read_pickle(ACTIVE_DATASET_PKL)
         return {"status": "success", "result": sanitize_obj(describe_numeric(df))}
     except HTTPException:
         raise
@@ -377,21 +564,14 @@ async def analysis_numeric(file: UploadFile = File(...)) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 
-@app.post("/api/analysis/categorical")
-async def analysis_categorical(file: UploadFile = File(...)) -> Dict[str, Any]:
-    filename = file.filename or ""
-    lower = filename.lower()
 
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+@app.post("/api/analysis/categorical")
+async def analysis_categorical(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+    if not ACTIVE_DATASET_PKL.exists():
+        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
 
     try:
-        df, _ = read_dataframe_and_raw(file)
+        df = pd.read_pickle(ACTIVE_DATASET_PKL)
         return {"status": "success", "result": sanitize_obj(describe_categorical(df))}
     except HTTPException:
         raise

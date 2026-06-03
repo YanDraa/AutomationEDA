@@ -11,6 +11,8 @@ import { getPreference } from "@/server/server-actions";
 
 import { DatasetProvider } from "@/context/dataset-context";
 
+import { DatasetBootstrapper } from "./_components/dataset-bootstrap";
+
 import { LayoutControls } from "./_components/sidebar/layout-controls";
 import { SearchDialog } from "./_components/sidebar/search-dialog";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
@@ -25,7 +27,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <DatasetProvider>
+      {/* Hydrate dataset from backend so upload is not needed again after refresh */}
+      <DatasetBootstrapper />
       <SidebarProvider
+
         defaultOpen={defaultOpen}
         style={
           {

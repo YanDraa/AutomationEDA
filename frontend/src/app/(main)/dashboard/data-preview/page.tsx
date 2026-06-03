@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 
 import {
   AlertCircle,
@@ -19,6 +20,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDataset } from "@/context/dataset-context";
+import { fetchCurrentDataset } from "@/lib/dataset-client";
+
 
 const BACKEND_URL = "http://127.0.0.1:8000";
 const PAGE_SIZE = 10;
@@ -79,35 +82,32 @@ function TypeBadge({ type }: { type: ColumnInfo["type"] }) {
 export default function Page() {
   const { dataset } = useDataset();
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [page, setPage] = useState(0);
 
-  const handleFile = useCallback(async (f: File) => {
-    setFile(f);
-    setLoading(true);
-    setError(null);
-    try {
-      const form = new FormData();
-      form.append("file", f);
-      const res = await fetch(`${BACKEND_URL}/api/preview`, { method: "POST", body: form });
-      if (!res.ok) throw new Error("Gagal mengambil preview dari backend.");
-      const data = await res.json();
-      setPreview(data.result as PreviewResult);
-      setPage(0);
-    } catch {
-      setError("Gagal memuat preview. Pastikan backend berjalan.");
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // gunakan GET endpoint agar auto-load seperti halaman analisis
+        const current = await fetchCurrentDataset();
+        if (!current?.preview) {
+          setPreview(null);
+          return;
+        }
+        setPreview(current.preview as PreviewResult);
+        setPage(0);
+      } catch {
+        setError("Gagal memuat preview. Pastikan backend berjalan.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const f = e.target.files?.[0];
-    if (f) void handleFile(f);
-    e.target.value = "";
-  };
 
   if (!dataset) return <EmptyState />;
 
@@ -124,23 +124,7 @@ export default function Page() {
             Dataset: <span className="font-medium text-foreground">{dataset.fileName}</span>
           </p>
         </div>
-        <div>
-          <input
-            id="preview-reupload"
-            type="file"
-            accept=".csv,.xlsx,.txt"
-            className="hidden"
-            onChange={onChange}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => (document.getElementById("preview-reupload") as HTMLInputElement | null)?.click()}
-          >
-            <Upload className="size-4" />
-            {file ? "Ganti File" : "Muat Preview"}
-          </Button>
-        </div>
+        <div />
       </div>
 
       {/* Stats */}
@@ -160,14 +144,12 @@ export default function Page() {
         ))}
       </div>
 
-      {!file && !loading && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <Database className="size-8 text-muted-foreground" />
-            <p className="text-muted-foreground text-sm">Klik <strong>"Muat Preview"</strong> dan pilih file yang sama untuk menampilkan isi tabel dan info kolom.</p>
-          </CardContent>
-        </Card>
+      {!loading && (
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+          <p className="text-center">Preview dataset akan dimuat otomatis dari server.</p>
+        </div>
       )}
+
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm">

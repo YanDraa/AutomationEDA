@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 
 import { AlertCircle, Tag, Upload } from "lucide-react";
 import Link from "next/link";
@@ -30,44 +31,48 @@ export default function Page() {
   const [stats, setStats] = useState<CatStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  // file re-upload UI removed (server-cached dataset used)
 
-  const fetchStats = useCallback(async (f: File) => {
-    setFile(f);
+  useEffect(() => {
+    if (!dataset) return;
+
     setLoading(true);
     setError(null);
-    try {
-      const form = new FormData();
-      form.append("file", f);
-      const res = await fetch(`${BACKEND_URL}/api/analysis/categorical`, { method: "POST", body: form });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const { index, columns, data: rows } = data.result.table as {
-        index: string[];
-        columns: string[];
-        data: (number | string | null)[][];
-      };
-      const parsed: CatStats = {};
-      index.forEach((colName, i) => {
-        const row = rows[i];
-        parsed[colName] = {} as CatStats[string];
-        columns.forEach((stat, j) => {
-          (parsed[colName] as Record<string, unknown>)[stat] = row[j];
-        });
-      });
-      setStats(parsed);
-    } catch {
-      setError("Gagal memuat statistik. Pastikan backend berjalan.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
-  const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const f = e.target.files?.[0];
-    if (f) void fetchStats(f);
-    e.target.value = "";
-  };
+    (async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/analysis/categorical`, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          // No file uploaded; backend will fallback to server-cached dataset
+          body: undefined,
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const { index, columns, data: rows } = data.result.table as {
+          index: string[];
+          columns: string[];
+          data: (number | string | null)[][];
+        };
+        const parsed: CatStats = {};
+        index.forEach((colName, i) => {
+          const row = rows[i];
+          parsed[colName] = {} as CatStats[string];
+          columns.forEach((stat, j) => {
+            (parsed[colName] as Record<string, unknown>)[stat] = row[j];
+          });
+        });
+        setStats(parsed);
+      } catch {
+        setError("Gagal memuat statistik. Pastikan backend berjalan.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [dataset]);
+
+
+
 
   if (!dataset) {
     return (
@@ -91,23 +96,10 @@ export default function Page() {
           <h1 className="font-semibold text-2xl">Statistik Kategorikal</h1>
           <p className="mt-1 text-muted-foreground text-sm">Dataset: <span className="font-medium text-foreground">{dataset.fileName}</span></p>
         </div>
-        <div>
-          <input id="cat-upload" type="file" accept=".csv,.xlsx,.txt" className="hidden" onChange={onChange} />
-          <Button size="sm" variant="outline" onClick={() => (document.getElementById("cat-upload") as HTMLInputElement | null)?.click()}>
-            <Upload className="size-4" />
-            {file ? "Hitung Ulang" : "Hitung Statistik"}
-          </Button>
-        </div>
+        <div />
       </div>
 
-      {!file && !loading && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <Tag className="size-8 text-muted-foreground" />
-            <p className="text-muted-foreground text-sm">Klik <strong>"Hitung Statistik"</strong> dan pilih file dataset Anda.</p>
-          </CardContent>
-        </Card>
-      )}
+
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm">
