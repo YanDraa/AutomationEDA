@@ -422,32 +422,85 @@ def _latest_uploaded_file_path() -> Path | None:
 
 @app.get("/api/current-dataset")
 async def current_dataset() -> Dict[str, Any]:
-    # Check if persisted pickle exists
-    if not ACTIVE_DATASET_PKL.exists():
-        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
+    # Jika file pickle atau metadata belum ada, kembalikan payload kosong
+    # agar frontend tahu bahwa pengguna belum meng-upload data (activated: false).
+    if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
+        return {
+            "status": "success",
+            "activated": False,
+            "dataset": None,
+            "preview": None,
+        }
 
-    # Load persisted DataFrame (keeps dtypes)
-    df = pd.read_pickle(ACTIVE_DATASET_PKL)
+    try:
+        import json
 
-    # Try to provide file metadata from latest raw file (best-effort)
-    path = _latest_uploaded_file_path()
-    raw_size = path.stat().st_size if path and path.exists() else 0
-    file_name = path.name if path else "active_dataset.pkl"
+        # Muat DataFrame dari pickle (menjaga dtype)
+        df = pd.read_pickle(ACTIVE_DATASET_PKL)
 
-    preview_data = build_dataset_preview(df, n_head=10)
+        # Muat metadata yang sudah di-persist saat upload
+        with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        preview_data = build_dataset_preview(df, n_head=10)
+
+        return {
+            "status": "success",
+            "activated": True,
+            "dataset": {
+                "fileName": meta.get("fileName", ""),
+                "originalFilename": meta.get("originalFilename", ""),
+                "rows": meta.get("rows", int(len(df))),
+                "columns": meta.get("columns", int(len(df.columns))),
+                "fileSize": meta.get("fileSize", ""),
+                "uploadedAt": meta.get("uploadedAt", ""),
+            },
+            "preview": preview_data,
+        }
+    except Exception as e:
+        # Jika file rusak atau gagal dibaca, anggap belum ada data
+        return {
+            "status": "success",
+            "activated": False,
+            "dataset": None,
+            "preview": None,
+            "_error": str(e),
+        }
+
+
+
+# -----------------------------
+# Endpoint: Reset / Clear Data
+# -----------------------------
+
+@app.post("/api/reset")
+async def reset_dataset() -> Dict[str, Any]:
+    """
+    Hapus file active_dataset.pkl dan active_dataset_meta.json dari server.
+    Digunakan oleh tombol 'Clear / Reset' di frontend untuk membersihkan sesi data.
+    """
+    deleted: list[str] = []
+
+    if ACTIVE_DATASET_PKL.exists():
+        ACTIVE_DATASET_PKL.unlink()
+        deleted.append(ACTIVE_DATASET_PKL.name)
+
+    if ACTIVE_DATASET_META_JSON.exists():
+        ACTIVE_DATASET_META_JSON.unlink()
+        deleted.append(ACTIVE_DATASET_META_JSON.name)
+
+    if deleted:
+        return {
+            "status": "success",
+            "message": f"Dataset berhasil direset. File yang dihapus: {', '.join(deleted)}",
+            "deleted": deleted,
+        }
 
     return {
-        "status": "success",
-        "dataset": {
-            "fileName": file_name,
-            "rows": int(len(df)),
-            "columns": int(len(df.columns)),
-            "fileSize": _format_file_size(int(raw_size)),
-            "uploadTime": "",
-        },
-        "preview": preview_data,
+        "status": "info",
+        "message": "Tidak ada data aktif yang perlu direset. Server sudah dalam keadaan bersih.",
+        "deleted": [],
     }
-
 
 
 @app.post("/api/upload")
@@ -552,11 +605,9 @@ async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]
 
 @app.post("/api/analysis/numeric")
 async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
-    if not ACTIVE_DATASET_PKL.exists():
-        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
-
+    # Gunakan helper _load_active_dataset_df() agar respons error seragam (HTTP 400)
     try:
-        df = pd.read_pickle(ACTIVE_DATASET_PKL)
+        df = _load_active_dataset_df()
         return {"status": "success", "result": sanitize_obj(describe_numeric(df))}
     except HTTPException:
         raise
@@ -567,11 +618,9 @@ async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str,
 
 @app.post("/api/analysis/categorical")
 async def analysis_categorical(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
-    if not ACTIVE_DATASET_PKL.exists():
-        raise HTTPException(status_code=404, detail="active_dataset.pkl not found")
-
+    # Gunakan helper _load_active_dataset_df() agar respons error seragam (HTTP 400)
     try:
-        df = pd.read_pickle(ACTIVE_DATASET_PKL)
+        df = _load_active_dataset_df()
         return {"status": "success", "result": sanitize_obj(describe_categorical(df))}
     except HTTPException:
         raise
