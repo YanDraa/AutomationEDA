@@ -48,12 +48,7 @@ export const sidebarItems: NavGroup[] = [
         title: "Dashboard",
         url: BASE,
         icon: LayoutDashboard,
-      },
-      {
-        title: "Upload Data",
-        url: `${BASE}/upload-data`,
-        icon: Upload,
-      },
+      },      
       {
         title: "Data Preview",
         url: `${BASE}/data-preview`,

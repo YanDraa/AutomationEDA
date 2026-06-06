@@ -70,12 +70,25 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
   });
 
   if (!res.ok) {
-    let detail = "Upload failed";
+    let detail = `Upload gagal (HTTP ${res.status})`;
     try {
-      const data = await res.json();
-      detail = data?.detail ?? detail;
+      const data = (await res.json()) as { detail?: unknown };
+      if (Array.isArray(data.detail)) {
+        detail = data.detail
+          .map((item) =>
+            typeof item === "object" && item !== null && "msg" in item
+              ? String((item as { msg: string }).msg)
+              : String(item),
+          )
+          .join(", ");
+      } else if (typeof data.detail === "string") {
+        detail = data.detail;
+      }
     } catch {
-      // ignore
+      if (res.status === 0 || res.status >= 500) {
+        detail =
+          "Backend tidak merespons. Pastikan server berjalan di http://127.0.0.1:8000";
+      }
     }
     throw new Error(detail);
   }

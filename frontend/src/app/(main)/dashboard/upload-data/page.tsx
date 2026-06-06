@@ -8,7 +8,6 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
-  FileType2,
   FileX2,
   Trash2,
   Upload,
@@ -25,7 +24,7 @@ import {
 
 // ─── Konstanta ──────────────────────────────────────────────────────────────
 
-const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".txt", ".json", ".xml"] as const;
+const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".txt", ".json"] as const;
 type AcceptedExt = (typeof ACCEPTED_EXTENSIONS)[number];
 
 const FORMAT_INFO: {
@@ -38,7 +37,7 @@ const FORMAT_INFO: {
   { ext: ".xlsx", label: ".xlsx", desc: "Microsoft Excel",         icon: FileSpreadsheet },
   { ext: ".txt",  label: ".txt",  desc: "Tab/Comma delimited",     icon: FileText        },
   { ext: ".json", label: ".json", desc: "JavaScript Object Notation", icon: FileJson     },
-  { ext: ".xml",  label: ".xml",  desc: "Extensible Markup Language", icon: FileType2    },
+  { ext: ".xls",  label: ".xls",  desc: "Legacy Microsoft Excel",    icon: FileSpreadsheet },
 ];
 
 const STEPS = [
@@ -102,10 +101,12 @@ export default function Page() {
         setSuccessFile(file.name);
         setFileSize(formatFileSize(file.size));
         router.push("/dashboard/data-preview");
-      } catch (_e) {
-        setError(
-          "Gagal membaca file. Pastikan backend berjalan di localhost:8000 dan coba lagi.",
-        );
+      } catch (e) {
+        const message =
+          e instanceof Error
+            ? e.message
+            : "Gagal membaca file. Pastikan backend berjalan di http://127.0.0.1:8000.";
+        setError(message);
       } finally {
         setIsParsing(false);
       }

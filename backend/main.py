@@ -9,15 +9,23 @@ import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.categorical_analysis import describe_categorical
+from backend.categorical_analysis import (
+    _manual_cramers_v,
+    _manual_pearson,
+    describe_categorical,
+)
 from backend.descriptive_stats import describe_numeric
+from insights import generate_ai_insight
 from backend.utils import (
     ACTIVE_DATASET_META_JSON,
     ACTIVE_DATASET_PKL,
     RAW_DIR,
+    SUPPORTED_UPLOAD_EXTENSIONS,
     build_dataset_preview,
+    cleanup_orphaned_dataset_metadata,
     get_categorical_columns,
     get_numeric_columns,
+    is_supported_upload,
     persist_metadata,
     read_dataframe_and_raw,
     sanitize_obj,
@@ -43,6 +51,22 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def _on_startup() -> None:
+    cleanup_orphaned_dataset_metadata()
+
+
+@app.get("/")
+async def health_check() -> Dict[str, Any]:
+    cleanup_orphaned_dataset_metadata()
+    return {
+        "status": "ok",
+        "service": "Automation EDA API",
+        "dataset_active": ACTIVE_DATASET_PKL.exists(),
+        "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
+    }
+
+
 def _latest_uploaded_file_path() -> Path | None:
     if not RAW_DIR.exists():
         return None
@@ -59,19 +83,118 @@ def _latest_uploaded_file_path() -> Path | None:
     return candidates[0]
 
 
+def _extract_column_stats(df: pd.DataFrame, col: str, col_type: str) -> Dict[str, Any]:
+    col_type = col_type.lower().strip()
+    if col_type == "numerical":
+        result = describe_numeric(df)
+    elif col_type == "categorical":
+        result = describe_categorical(df)
+    else:
+        raise ValueError("Parameter 'type' harus 'numerical' atau 'categorical'.")
+
+    table = result["table"]
+    if col not in table["index"]:
+        raise ValueError(
+            f"Kolom '{col}' tidak ditemukan atau bukan tipe {col_type}."
+        )
+
+    row_idx = table["index"].index(col)
+    return dict(zip(table["columns"], table["data"][row_idx]))
+
+
+def _correlation_strength_label(value: float) -> str:
+    abs_val = abs(value)
+    if abs_val >= 0.7:
+        return "kuat"
+    if abs_val >= 0.4:
+        return "sedang"
+    if abs_val >= 0.2:
+        return "lemah"
+    return "sangat lemah"
+
+
+def _build_bivariate_summary(df: pd.DataFrame, x_col: str, y_col: str) -> Dict[str, Any]:
+    if x_col not in df.columns:
+        raise ValueError(f"Kolom '{x_col}' tidak ditemukan dalam dataset.")
+    if y_col not in df.columns:
+        raise ValueError(f"Kolom '{y_col}' tidak ditemukan dalam dataset.")
+
+    pair = df[[x_col, y_col]].dropna()
+    n_pairs = len(pair)
+    x_num = pd.api.types.is_numeric_dtype(df[x_col])
+    y_num = pd.api.types.is_numeric_dtype(df[y_col])
+
+    summary: Dict[str, Any] = {
+        "x_column": x_col,
+        "y_column": y_col,
+        "n_valid_pairs": n_pairs,
+        "x_dtype": "numerical" if x_num else "categorical",
+        "y_dtype": "numerical" if y_num else "categorical",
+    }
+
+    if n_pairs == 0:
+        summary["measure"] = "no_data"
+        return summary
+
+    if x_num and y_num:
+        valid = pair.copy()
+        valid[x_col] = pd.to_numeric(valid[x_col], errors="coerce")
+        valid[y_col] = pd.to_numeric(valid[y_col], errors="coerce")
+        valid = valid.dropna()
+        r = _manual_pearson(valid[x_col], valid[y_col])
+        summary["measure"] = "pearson_correlation"
+        summary["pearson_r"] = round(float(r), 4)
+        summary["strength_label"] = _correlation_strength_label(r)
+        summary["direction"] = "positif" if r > 0 else ("negatif" if r < 0 else "netral")
+        summary["n_valid_pairs"] = len(valid)
+        summary["x_mean"] = round(float(valid[x_col].mean()), 4)
+        summary["y_mean"] = round(float(valid[y_col].mean()), 4)
+    elif not x_num and not y_num:
+        v = _manual_cramers_v(pair[x_col], pair[y_col])
+        summary["measure"] = "cramers_v"
+        summary["cramers_v"] = round(float(v), 4)
+        summary["strength_label"] = _correlation_strength_label(v)
+        top_combos = (
+            pair.groupby([x_col, y_col]).size().sort_values(ascending=False).head(3)
+        )
+        summary["top_combinations"] = [
+            {"x": str(idx[0]), "y": str(idx[1]), "count": int(cnt)}
+            for idx, cnt in top_combos.items()
+        ]
+    else:
+        num_col = x_col if x_num else y_col
+        cat_col = y_col if x_num else x_col
+        grouped = pair.copy()
+        grouped[num_col] = pd.to_numeric(grouped[num_col], errors="coerce")
+        grouped = grouped.dropna(subset=[num_col])
+        stats_df = grouped.groupby(cat_col)[num_col].agg(["mean", "count", "std"])
+        summary["measure"] = "numeric_by_category"
+        summary["numeric_column"] = num_col
+        summary["categorical_column"] = cat_col
+        summary["group_stats"] = {
+            "mean": {
+                str(k): round(float(v), 4)
+                for k, v in stats_df["mean"].items()
+            },
+            "count": {str(k): int(v) for k, v in stats_df["count"].items()},
+            "std": {
+                str(k): round(float(v), 4) if pd.notna(v) else None
+                for k, v in stats_df["std"].items()
+            },
+        }
+
+    return summary
+
+
 def _resolve_dataframe(file: Optional[UploadFile]) -> pd.DataFrame:
     if file is not None and file.filename:
         filename = file.filename
         lower = (filename or "").lower()
-        if not (
-            lower.endswith(".csv")
-            or lower.endswith(".xlsx")
-            or lower.endswith(".xls")
-            or lower.endswith(".txt")
-        ):
+        if not is_supported_upload(filename):
+            supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
+                detail=f"Unsupported file type. Use {supported}",
             )
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
@@ -99,6 +222,8 @@ async def current_dataset() -> Dict[str, Any]:
         "numeric_columns": [],
         "categorical_columns": [],
     }
+
+    cleanup_orphaned_dataset_metadata()
 
     if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
         return empty_payload
@@ -158,17 +283,15 @@ async def reset_dataset() -> Dict[str, Any]:
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
     filename = file.filename or ""
-    lower = filename.lower()
 
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
+    if not filename.strip():
+        raise HTTPException(status_code=400, detail="No file name provided.")
+
+    if not is_supported_upload(filename):
+        supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
+            detail=f"Unsupported file type. Use {supported}",
         )
 
     try:
@@ -297,6 +420,59 @@ async def visualization_bivariate(
             "x_col": x_col,
             "y_col": y_col,
             "options": sanitize_obj(options),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/univariate")
+async def insights_univariate(
+    col: str = Form(...),
+    type: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        col_type = type.lower().strip()
+        stats = _extract_column_stats(df, col, col_type)
+        stats["column"] = col
+        context = f"univariate_{col_type}"
+        insight = generate_ai_insight(stats, context)
+        return {
+            "status": "success",
+            "column": col,
+            "type": col_type,
+            "stats": sanitize_obj(stats),
+            "insight": insight,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/bivariate")
+async def insights_bivariate(
+    x_col: str = Form(...),
+    y_col: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        summary = _build_bivariate_summary(df, x_col, y_col)
+        insight = generate_ai_insight(summary, "bivariate")
+        return {
+            "status": "success",
+            "x_col": x_col,
+            "y_col": y_col,
+            "stats": sanitize_obj(summary),
+            "insight": insight,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

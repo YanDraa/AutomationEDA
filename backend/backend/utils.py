@@ -18,6 +18,83 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 ACTIVE_DATASET_PKL = RAW_DIR / "active_dataset.pkl"
 ACTIVE_DATASET_META_JSON = RAW_DIR / "active_dataset_meta.json"
 
+SUPPORTED_UPLOAD_EXTENSIONS = (".csv", ".xlsx", ".xls", ".txt", ".json")
+_CSV_ENCODINGS = ("utf-8-sig", "utf-8", "latin-1", "cp1252")
+
+
+def is_supported_upload(filename: str) -> bool:
+    lower = (filename or "").lower()
+    return any(lower.endswith(ext) for ext in SUPPORTED_UPLOAD_EXTENSIONS)
+
+
+def cleanup_orphaned_dataset_metadata() -> None:
+    """Remove stale metadata when the pickled dataset file is missing."""
+    if not ACTIVE_DATASET_PKL.exists() and ACTIVE_DATASET_META_JSON.exists():
+        ACTIVE_DATASET_META_JSON.unlink(missing_ok=True)
+
+
+def _read_csv_robust(bio: io.BytesIO, sep: str = ",") -> pd.DataFrame:
+    last_error: Exception | None = None
+    for encoding in _CSV_ENCODINGS:
+        try:
+            bio.seek(0)
+            return pd.read_csv(bio, sep=sep, encoding=encoding)
+        except Exception as exc:
+            last_error = exc
+    raise HTTPException(
+        status_code=400,
+        detail=f"Could not parse delimited file (tried encodings: {', '.join(_CSV_ENCODINGS)}): {last_error}",
+    )
+
+
+def _read_json_dataframe(bio: io.BytesIO) -> pd.DataFrame:
+    try:
+        bio.seek(0)
+        text = bio.read().decode("utf-8-sig")
+        payload = json.loads(text)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not parse JSON: {exc}") from exc
+
+    if isinstance(payload, list):
+        if not payload:
+            raise HTTPException(status_code=400, detail="JSON array is empty.")
+        return pd.DataFrame(payload)
+
+    if isinstance(payload, dict):
+        if not payload:
+            raise HTTPException(status_code=400, detail="JSON object is empty.")
+        if all(isinstance(v, list) for v in payload.values()):
+            return pd.DataFrame(payload)
+        return pd.DataFrame([payload])
+
+    raise HTTPException(
+        status_code=400,
+        detail="Unsupported JSON structure. Use an array of objects or a column-oriented object.",
+    )
+
+
+def _read_excel_dataframe(bio: io.BytesIO, filename: str) -> pd.DataFrame:
+    engines: list[str | None]
+    if filename.endswith(".xlsx"):
+        engines = ["openpyxl", None]
+    else:
+        engines = ["xlrd", None, "openpyxl"]
+
+    last_error: Exception | None = None
+    for engine in engines:
+        try:
+            bio.seek(0)
+            if engine is None:
+                return pd.read_excel(bio)
+            return pd.read_excel(bio, engine=engine)
+        except Exception as exc:
+            last_error = exc
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Could not parse Excel file: {last_error}",
+    )
+
 
 def _is_nan(x: Any) -> bool:
     try:
@@ -86,52 +163,62 @@ def read_dataframe_and_raw(file: UploadFile) -> tuple[pd.DataFrame, bytes]:
     if not raw:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
+    if not is_supported_upload(filename):
+        supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Use {supported}",
+        )
+
     bio = io.BytesIO(raw)
 
     if filename.endswith(".csv"):
-        try:
-            df = pd.read_csv(bio)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse CSV: {e}")
+        df = _read_csv_robust(bio, sep=",")
 
     elif filename.endswith(".txt"):
-        try:
-            bio.seek(0)
-            df = pd.read_csv(bio, sep="\t")
-            if df.shape[1] == 1:
-                bio.seek(0)
-                df = pd.read_csv(bio, sep=",")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse TXT: {e}")
+        df = _read_csv_robust(bio, sep="\t")
+        if df.shape[1] == 1:
+            df = _read_csv_robust(bio, sep=",")
 
     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
-        try:
-            df = pd.read_excel(bio, engine="openpyxl")
-        except ValueError:
-            try:
-                bio.seek(0)
-                df = pd.read_excel(bio)
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Could not parse Excel: {e}")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse Excel: {e}")
+        df = _read_excel_dataframe(bio, filename)
+
+    elif filename.endswith(".json"):
+        df = _read_json_dataframe(bio)
 
     else:
+        supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
+            detail=f"Unsupported file type. Use {supported}",
         )
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="File parsed successfully but contains no data rows.")
+
+    if len(df.columns) == 0:
+        raise HTTPException(status_code=400, detail="File parsed successfully but contains no columns.")
 
     return df, raw
 
 
 def _load_active_dataset_df() -> pd.DataFrame:
+    cleanup_orphaned_dataset_metadata()
     if not ACTIVE_DATASET_PKL.exists():
         raise HTTPException(
             status_code=400,
             detail="No active dataset on server. Please upload data first via /api/upload.",
         )
-    return pd.read_pickle(ACTIVE_DATASET_PKL)
+    try:
+        return pd.read_pickle(ACTIVE_DATASET_PKL)
+    except Exception as exc:
+        cleanup_orphaned_dataset_metadata()
+        if ACTIVE_DATASET_PKL.exists():
+            ACTIVE_DATASET_PKL.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Active dataset is corrupted. Please upload your file again. ({exc})",
+        ) from exc
 
 
 def persist_metadata(

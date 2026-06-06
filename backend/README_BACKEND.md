@@ -7,8 +7,12 @@ Run:
 4) uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 Endpoints:
-- POST /api/upload
+- GET  /                      (health check)
+- GET  /api/current-dataset
+- POST /api/upload            (.csv, .xlsx, .xls, .txt, .json)
+- POST /api/preview
 - POST /api/analysis/numeric
 - POST /api/analysis/categorical
-- POST /api/analysis/association
+- POST /api/insights/univariate
+- POST /api/insights/bivariate
 
