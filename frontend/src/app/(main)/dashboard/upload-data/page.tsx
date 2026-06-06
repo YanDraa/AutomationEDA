@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   CheckCircle2,
@@ -64,6 +65,7 @@ function formatFileSize(bytes: number): string {
 // ─── Komponen utama ───────────────────────────────────────────────────────────
 
 export default function Page() {
+  const router = useRouter();
   const { setDataset, clearDataset, dataset } = useDataset();
 
   const [isParsing, setIsParsing]     = useState(false);
@@ -99,6 +101,7 @@ export default function Page() {
         setDataset(result);
         setSuccessFile(file.name);
         setFileSize(formatFileSize(file.size));
+        router.push("/dashboard/data-preview");
       } catch (_e) {
         setError(
           "Gagal membaca file. Pastikan backend berjalan di localhost:8000 dan coba lagi.",
