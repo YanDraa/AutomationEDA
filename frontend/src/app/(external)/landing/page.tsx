@@ -174,7 +174,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-foreground transition-colors">Fitur</a>
             <a href="#team" className="hover:text-foreground transition-colors">Tim</a>
             <Link
-              href="/dashboard"
+              href="/dashboard/upload-data"
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Buka Dashboard <ChevronRight className="size-3.5" />
@@ -238,12 +238,13 @@ export default function LandingPage() {
             }`}
         >
           <Link
-            href="/dashboard"
+            href="/dashboard/upload-data"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all"
           >
             <Zap className="size-4" />
             Mulai Sekarang
           </Link>
+
           <a
             href="#team"
             className="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-all"
@@ -409,11 +410,12 @@ export default function LandingPage() {
             Upload dataset Anda dan dapatkan insight mendalam dalam hitungan detik.
           </p>
           <Link
-            href="/dashboard"
+            href="/dashboard/upload-data"
             className="mt-8 inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-primary/30 transition-all"
           >
-            Buka Dashboard <ChevronRight className="size-4" />
+            Buka Upload Data <ChevronRight className="size-4" />
           </Link>
+
         </div>
       </section>
 
@@ -426,11 +428,12 @@ export default function LandingPage() {
           </div>
           <p>© {new Date().getFullYear()} · Proyek UAS Pemrograman Data Sains</p>
           <Link
-            href="/dashboard"
+            href="/dashboard/upload-data"
             className="hover:text-foreground transition-colors"
           >
-            Buka Aplikasi →
+            Buka Upload Data →
           </Link>
+
         </div>
       </footer>
     </div>
