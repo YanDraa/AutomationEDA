@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 
 import { AlertCircle, Loader2 } from "lucide-react";
 
+import { AiInsightPanel } from "@/components/visualizations/ai-insight-panel";
 import { HighchartsChart } from "@/components/visualizations/highcharts-chart";
 import { VizFieldSelect } from "@/components/visualizations/viz-field-select";
 import { VizPageShell } from "@/components/visualizations/viz-page-shell";
+import { fetchUnivariateInsight } from "@/lib/insights-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -47,6 +49,10 @@ function UnivariatePanel({
   const [chartOptions, setChartOptions] = useState<HighchartsOptions | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [insight, setInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+  const [insightVisible, setInsightVisible] = useState(false);
 
   useEffect(() => {
     if (columns.length === 0) {
@@ -65,18 +71,42 @@ function UnivariatePanel({
     }
     setLoading(true);
     setError(null);
-    try {
-      const result = await postVisualizationOptions(endpoint, {
-        col,
-        chart_type: chartType,
-      });
-      setChartOptions(result);
-    } catch (e) {
+    setInsight(null);
+    setInsightError(null);
+    setInsightVisible(false);
+    setInsightLoading(true);
+
+    const [chartResult, insightResult] = await Promise.all([
+      postVisualizationOptions(endpoint, { col, chart_type: chartType })
+        .then((data) => ({ ok: true as const, data }))
+        .catch((e: unknown) => ({
+          ok: false as const,
+          message: e instanceof Error ? e.message : "Gagal membuat grafik.",
+        })),
+      fetchUnivariateInsight(col, mode)
+        .then((data) => ({ ok: true as const, data }))
+        .catch((e: unknown) => ({
+          ok: false as const,
+          message: e instanceof Error ? e.message : "Gagal memuat insight AI.",
+        })),
+    ]);
+
+    if (chartResult.ok) {
+      setChartOptions(chartResult.data);
+    } else {
       setChartOptions(null);
-      setError(e instanceof Error ? e.message : "Gagal membuat grafik.");
-    } finally {
-      setLoading(false);
+      setError(chartResult.message);
     }
+
+    if (insightResult.ok) {
+      setInsight(insightResult.data);
+    } else {
+      setInsightError(insightResult.message);
+    }
+
+    setInsightVisible(chartResult.ok || insightResult.ok);
+    setLoading(false);
+    setInsightLoading(false);
   };
 
   return (
@@ -132,6 +162,13 @@ function UnivariatePanel({
         ) : null}
 
         <HighchartsChart options={chartOptions} />
+
+        <AiInsightPanel
+          insight={insight}
+          loading={insightLoading}
+          error={insightError}
+          visible={insightVisible || insightLoading}
+        />
       </CardContent>
     </Card>
   );

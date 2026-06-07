@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from pydantic import BaseModel
+
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +17,7 @@ from backend.categorical_analysis import (
     describe_categorical,
 )
 from backend.descriptive_stats import describe_numeric
-from insights import generate_ai_insight
+from insights import generate_ai_insight, get_chart_recommendation
 from backend.utils import (
     ACTIVE_DATASET_META_JSON,
     ACTIVE_DATASET_PKL,
@@ -476,6 +478,73 @@ async def insights_bivariate(
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+# Request schemas for AI Insights
+class TextInsightRequest(BaseModel):
+    stats_summary: Dict[str, Any]
+    context_type: str
+
+
+class ChartRecommendationRequest(BaseModel):
+    column_name: str
+
+
+@app.post("/api/insights/text")
+async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
+    try:
+        insight = generate_ai_insight(payload.stats_summary, payload.context_type)
+        return {
+            "status": "success",
+            "insight": insight
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/recommend-chart")
+async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]:
+    try:
+        df = _load_active_dataset_df()
+        col = payload.column_name
+        if col not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Kolom '{col}' tidak ditemukan dalam dataset aktif."
+            )
+            
+        dtype_str = str(df[col].dtype)
+        if dtype_str in ("int64", "float64"):
+            data_type = "numerical"
+        elif dtype_str in ("object", "string"):
+            data_type = "categorical"
+        elif "datetime" in dtype_str:
+            data_type = "datetime"
+        else:
+            data_type = dtype_str
+            
+        unique_count = int(df[col].nunique())
+        sample_values = sanitize_obj(df[col].dropna().head(5).tolist())
+        
+        recommendation = get_chart_recommendation(
+            column_name=col,
+            data_type=data_type,
+            unique_count=unique_count,
+            sample_values=sample_values
+        )
+        
+        return {
+            "status": "success",
+            "column_name": col,
+            "data_type": data_type,
+            "unique_count": unique_count,
+            "sample_values": sample_values,
+            "recommendation": recommendation
+        }
     except HTTPException:
         raise
     except Exception as e:

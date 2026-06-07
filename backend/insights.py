@@ -13,14 +13,28 @@ load_dotenv(_ENV_PATH)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 SYSTEM_PROMPT = (
-    "Kamu adalah Senior Data Analyst yang bertugas memberikan wawasan bisnis (insight) "
-    "singkat, tajam, dan mudah dipahami oleh eksekutif berdasarkan ringkasan data statistik "
-    "yang diberikan. JANGAN PERNAH mengarang angka di luar data yang disediakan. "
-    "Berikan output langsung dalam bentuk poin-poin ringkas menggunakan format Markdown "
-    "(maksimal 3-4 poin)."
+    "Kamu Senior Data Analyst. Berikan wawasan bisnis singkat, tajam, maksimal 3-4 poin markdown "
+    "dari ringkasan statistik yang diberikan. Jangan mengarang angka di luar data."
+)
+
+SYSTEM_CHART_PROMPT = (
+    "Kamu adalah AI Chart Recommender dan Senior Data Analyst. Tugasmu adalah memberikan rekomendasi grafik terbaik "
+    "untuk memvisualisasikan variabel berdasarkan prinsip dasar statistika:\n"
+    "- Line Chart: Hanya untuk data Kontinu/Time-series (Tren dari waktu ke waktu).\n"
+    "- Bar Chart: Untuk data Kategorikal/Diskret untuk membandingkan antar grup.\n"
+    "- Histogram: Untuk data Numerik Kontinu untuk melihat sebaran/distribusi frekuensi.\n"
+    "- Pie Chart: Hanya untuk Kategorikal dengan jumlah unik sedikit (< 5) untuk melihat proporsi/persentase dari total 100%.\n"
+    "- Box Plot: Untuk melihat sebaran data numerik kontinu, nilai kuartil, dan deteksi outlier berdasarkan kelompok tertentu.\n"
+    "- Scatter Plot: Untuk melihat korelasi/hubungan antara dua data numerik kontinu.\n\n"
+    "Wajib mengembalikan rekomendasi dalam format JSON murni (TANPA pembungkus markdown seperti ```json atau ```) dengan struktur:\n"
+    "{\n"
+    "  \"recommended_chart\": \"Line Chart/Bar Chart/Histogram/Pie Chart/Box Plot/Scatter Plot\",\n"
+    "  \"reason\": \"Alasan ilmiah dalam Bahasa Indonesia berdasarkan tipe datanya.\"\n"
+    "}"
 )
 
 _model: Optional[Any] = None
+_chart_model: Optional[Any] = None
 
 
 def _init_gemini_model() -> Optional[Any]:
@@ -45,6 +59,28 @@ def _get_model() -> Optional[Any]:
     return _model
 
 
+def _init_gemini_chart_model() -> Optional[Any]:
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=GEMINI_API_KEY)
+        return genai.GenerativeModel(
+            "gemini-1.5-flash",
+            system_instruction=SYSTEM_CHART_PROMPT,
+        )
+    except Exception:
+        return None
+
+
+def _get_chart_model() -> Optional[Any]:
+    global _chart_model
+    if _chart_model is None:
+        _chart_model = _init_gemini_chart_model()
+    return _chart_model
+
+
 def generate_ai_insight(stats_summary: dict, context_type: str) -> str:
     model = _get_model()
     if model is not None:
@@ -62,6 +98,85 @@ def generate_ai_insight(stats_summary: dict, context_type: str) -> str:
         except Exception:
             pass
     return _fallback_insight(stats_summary, context_type)
+
+
+def get_chart_recommendation(
+    column_name: str,
+    data_type: str,
+    unique_count: int,
+    sample_values: list
+) -> dict:
+    """
+    Kirim metadata kolom ke Gemini. Paksa Gemini mengembalikan format JSON murni
+    tanpa hiasan markdown (```json) dengan struktur:
+    {
+      "recommended_chart": "Nama Grafik (Line Chart/Bar Chart/Histogram/Pie Chart/Box Plot/Scatter Plot)",
+      "reason": "Alasan ilmiah dalam Bahasa Indonesia berdasarkan tipe datanya."
+    }
+    Jika gagal, gunakan logika fallback berbasis aturan statistika.
+    """
+    model = _get_chart_model()
+    if model is not None:
+        try:
+            prompt = (
+                f"Rekomendasikan grafik untuk kolom berikut:\n"
+                f"- Nama Kolom: {column_name}\n"
+                f"- Tipe Data: {data_type}\n"
+                f"- Jumlah Nilai Unik: {unique_count}\n"
+                f"- Sampel Nilai: {sample_values}\n"
+            )
+            response = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            res_text = (response.text or "").strip()
+            
+            # Clean markdown code blocks if present
+            if res_text.startswith("```"):
+                lines = res_text.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                res_text = "\n".join(lines).strip()
+                
+            data = json.loads(res_text)
+            if "recommended_chart" in data and "reason" in data:
+                return {
+                    "recommended_chart": data["recommended_chart"],
+                    "reason": data["reason"]
+                }
+        except Exception:
+            pass
+            
+    # LOGIKA FALLBACK (Rule-based) sesuai prinsip dasar statistika
+    dt_lower = data_type.lower()
+    is_temporal = any(x in dt_lower for x in ["date", "time", "temporal", "datetime"]) or \
+                  any(x in column_name.lower() for x in ["date", "time", "tahun", "bulan", "hari", "tanggal", "year", "month", "day", "hour", "minute", "second", "tgl", "created_at", "updated_at"])
+    
+    if is_temporal:
+        return {
+            "recommended_chart": "Line Chart",
+            "reason": f"Kolom '{column_name}' diidentifikasi sebagai data temporal/deret waktu (time-series). Line Chart paling cocok digunakan untuk menunjukkan tren atau perubahan dari waktu ke waktu secara berkelanjutan."
+        }
+    
+    if "categorical" in dt_lower or "object" in dt_lower or "string" in dt_lower or "str" in dt_lower or "bool" in dt_lower:
+        if unique_count < 5:
+            return {
+                "recommended_chart": "Pie Chart",
+                "reason": f"Kolom '{column_name}' adalah data kategorikal dengan jumlah kategori unik yang sedikit ({unique_count} < 5). Pie Chart sangat ideal untuk menunjukkan proporsi atau kontribusi persentase setiap kategori terhadap keseluruhan (100%)."
+            }
+        else:
+            return {
+                "recommended_chart": "Bar Chart",
+                "reason": f"Kolom '{column_name}' adalah data kategorikal/diskret dengan {unique_count} kategori unik. Bar Chart adalah opsi terbaik untuk membandingkan frekuensi, jumlah, atau ukuran antar grup yang berbeda."
+            }
+            
+    # Default numeric and continuous
+    return {
+        "recommended_chart": "Histogram",
+        "reason": f"Kolom '{column_name}' diidentifikasi sebagai data numerik kontinu. Histogram sangat tepat untuk memvisualisasikan bentuk sebaran data, frekuensi kemunculan nilai, serta kepadatan distribusi data tersebut."
+    }
 
 
 def _fallback_insight(stats_summary: dict, context_type: str) -> str:
