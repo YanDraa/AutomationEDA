@@ -50,7 +50,12 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         >
           <header
             className={cn(
-              "flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
+              "flex h-12 shrink-0 items-center gap-2 border-b transition-[height,opacity,margin,padding] duration-200 ease-linear",
+              // Saat sidebar collapse (icon/offcanvas), navbar ikut mengecil/menghilang agar layout lebih rapih.
+              // - icon: hanya tinggi yang berkurang (minim shift)
+              "group-has-data-[collapsible=icon]/sidebar-wrapper:h-9",
+              // - offcanvas: sembunyikan dengan animasi opacity/height
+              "group-has-data-[collapsible=offcanvas]/sidebar-wrapper:h-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:opacity-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:overflow-hidden group-has-data-[collapsible=offcanvas]/sidebar-wrapper:border-b-0",
               // Handle sticky navbar style with conditional classes so blur, background, z-index, and rounded corners remain consistent across all SidebarVariant layouts.
               "[html[data-navbar-style=sticky]_&]:sticky [html[data-navbar-style=sticky]_&]:top-0 [html[data-navbar-style=sticky]_&]:z-50 [html[data-navbar-style=sticky]_&]:overflow-hidden [html[data-navbar-style=sticky]_&]:rounded-t-[inherit] [html[data-navbar-style=sticky]_&]:bg-background/50 [html[data-navbar-style=sticky]_&]:backdrop-blur-md",
             )}

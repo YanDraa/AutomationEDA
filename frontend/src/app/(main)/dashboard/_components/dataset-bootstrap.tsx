@@ -12,14 +12,23 @@ export function DatasetBootstrapper() {
     let cancelled = false;
 
     (async () => {
-      const current = await fetchCurrentDataset();
-      if (cancelled) return;
-      if (!current?.dataset) return;
+      try {
+        const current = await fetchCurrentDataset();
+        if (cancelled) return;
+        if (!current?.dataset) return;
 
-      // dataset-context requires uploadTime string; backend currently returns empty string.
-      // Keep existing behavior but avoid runtime issues.
-      setDataset(current.dataset);
-
+        // Backend payload belum selalu menyediakan uploadTime/fileSize sesuai shape,
+        // jadi kita fall back supaya UI tetap menarik dan tidak menimbulkan error.
+        setDataset({
+          fileName: current.dataset.fileName ?? "",
+          rows: Number(current.dataset.rows ?? 0),
+          columns: Number(current.dataset.columns ?? 0),
+          uploadTime: current.dataset.uploadTime || "-",
+          fileSize: current.dataset.fileSize || "-",
+        });
+      } catch {
+        // jika backend belum siap / gagal fetch, jangan ganggu rendering UI
+      }
     })();
 
     return () => {

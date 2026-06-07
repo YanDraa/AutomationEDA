@@ -23,44 +23,55 @@ import { useDataset } from "@/context/dataset-context";
 import { NavMain } from "./nav-main";
 
 function DatasetInformationCard() {
-  const { dataset } = useDataset();
+  const { dataset } = useDataset()
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="font-semibold text-sm">Dataset Information</div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="font-semibold text-sm">Dataset Information</div>
+      </div>
 
       {!dataset ? (
-        <div className="mt-3 rounded-md border border-dashed bg-muted/30 p-3 text-center text-muted-foreground text-xs">
+        <div className="mt-3 rounded-md border border-dashed bg-muted/30 p-3 text-center text-xs text-muted-foreground">
           Belum ada file yang di upload
         </div>
       ) : (
         <div className="mt-3 grid gap-2 text-sm">
           <div className="flex items-start justify-between gap-4">
-            <span className="shrink-0 text-muted-foreground">File Name</span>
-            <span className="max-w-[10rem] truncate text-right font-medium" title={dataset.fileName}>
+            <span className="text-muted-foreground">File Name</span>
+            <span
+              className="max-w-[10rem] truncate text-right font-medium"
+              title={dataset.fileName}
+            >
               {dataset.fileName}
             </span>
           </div>
+
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">Rows</span>
             <span className="font-medium">{dataset.rows.toLocaleString()}</span>
           </div>
+
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">Columns</span>
             <span className="font-medium">{dataset.columns}</span>
           </div>
+
           <div className="flex items-center justify-between gap-4">
             <span className="text-muted-foreground">File Size</span>
             <span className="font-medium">{dataset.fileSize}</span>
           </div>
+
           <div className="flex items-start justify-between gap-4">
-            <span className="shrink-0 text-muted-foreground">Upload Time</span>
-            <span className="max-w-[10rem] text-right font-medium">{dataset.uploadTime}</span>
+            <span className="text-muted-foreground">Upload Time</span>
+            <span className="max-w-[10rem] text-right font-medium">
+              {dataset.uploadTime}
+            </span>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -82,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               {/* ✅ Fix: /main/dashboard → /dashboard */}
-              <Link prefetch={false} href="/dashboard">
+              <Link prefetch={false} href="/landing">
                 <Command />
                 <span className="font-semibold text-base">{APP_CONFIG.name}</span>
               </Link>
@@ -95,7 +106,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={sidebarItems} />
       </SidebarContent>
 
-      <SidebarFooter className="flex flex-col gap-3">
+      <SidebarFooter
+        className="flex flex-col gap-3 transition-[opacity,height] duration-200 ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-has-data-[collapsible=icon]/sidebar-wrapper:h-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:opacity-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:h-0 overflow-hidden"
+      >
         <DatasetInformationCard />
       </SidebarFooter>
     </Sidebar>
