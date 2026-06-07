@@ -2,6 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { useRouter } from "next/navigation";
+
+
 import { CheckCircle2, FileSpreadsheet, Trash2, Upload, UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,20 +16,27 @@ import {
 } from "@/context/dataset-context";
 
 export default function Page() {
+  const router = useRouter();
   const { setDataset, clearDataset, dataset } = useDataset();
   const [isParsing, setIsParsing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successFile, setSuccessFile] = useState<string | null>(null);
 
-  const accepted = useMemo(() => ".csv,.xlsx,.txt", []);
+  const accepted = useMemo(() => ".csv,.xlsx,.xls,.txt,.json", []);
 
   const handleFile = useCallback(
     async (file: File | null | undefined) => {
       if (!file) return;
       const lower = file.name.toLowerCase();
-      if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx") && !lower.endsWith(".txt")) {
-        setError("Format tidak didukung. Gunakan file .csv, .xlsx, atau .txt");
+      if (
+        !lower.endsWith(".csv") &&
+        !lower.endsWith(".xlsx") &&
+        !lower.endsWith(".xls") &&
+        !lower.endsWith(".txt") &&
+        !lower.endsWith(".json")
+      ) {
+        setError("Format tidak didukung. Gunakan file .csv, .xlsx, .xls, .txt, atau .json");
         setSuccessFile(null);
         return;
       }
@@ -37,8 +47,16 @@ export default function Page() {
         const result: DatasetInfo = await simulateDatasetFromFile(file);
         setDataset(result);
         setSuccessFile(file.name);
-      } catch (_e) {
-        setError("Gagal membaca file. Pastikan backend berjalan di localhost:8000 dan coba lagi.");
+
+        // After upload, auto-navigate to preview page
+        router.push("/dashboard/data-preview");
+
+      } catch (e) {
+        const message =
+          e instanceof Error
+            ? e.message
+            : "Gagal membaca file. Pastikan backend berjalan di http://127.0.0.1:8000.";
+        setError(message);
       } finally {
         setIsParsing(false);
       }

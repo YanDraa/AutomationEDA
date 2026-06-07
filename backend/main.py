@@ -1,283 +1,44 @@
 from __future__ import annotations
 
-import io
-import math
-from typing import Any, Dict
+import json
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-import numpy as np
+from pydantic import BaseModel
+
 import pandas as pd
-import scipy.stats as scipy_stats
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-
-# -----------------------------
-# Utilities: sanitization
-# -----------------------------
-
-def _is_nan(x: Any) -> bool:
-    try:
-        return bool(pd.isna(x))
-    except Exception:
-        return False
-
-
-def sanitize_value(x: Any) -> Any:
-    if isinstance(x, (np.integer,)):
-        return int(x)
-    if isinstance(x, (np.floating,)):
-        v = float(x)
-        if math.isnan(v) or math.isinf(v):
-            return None
-        return v
-    if isinstance(x, (np.bool_,)):
-        return bool(x)
-    if isinstance(x, (pd.Timestamp, pd.Timedelta)):
-        return str(x)
-    if _is_nan(x):
-        return None
-    if isinstance(x, float) and (math.isnan(x) or math.isinf(x)):
-        return None
-    return x
-
-
-def sanitize_obj(obj: Any) -> Any:
-    if isinstance(obj, dict):
-        return {str(k): sanitize_obj(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [sanitize_obj(v) for v in obj]
-    if isinstance(obj, tuple):
-        return [sanitize_obj(v) for v in obj]
-    if isinstance(obj, np.ndarray):
-        return sanitize_obj(obj.tolist())
-    if isinstance(obj, pd.DataFrame):
-        return {
-            "columns": [str(c) for c in obj.columns.tolist()],
-            "index": [str(i) for i in obj.index.tolist()],
-            "data": [[sanitize_value(v) for v in row] for row in obj.values.tolist()],
-        }
-    if isinstance(obj, pd.Series):
-        return {
-            "name": obj.name,
-            "index": [str(i) for i in obj.index.tolist()],
-            "data": [sanitize_value(v) for v in obj.tolist()],
-        }
-    return sanitize_value(obj)
-
-
-def _format_file_size(size_bytes: int) -> str:
-    """Format bytes menjadi string yang human-readable."""
-    if size_bytes <= 0:
-        return "0 B"
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    if size_bytes < 1024 ** 2:
-        return f"{size_bytes / 1024:.2f} KB"
-    return f"{size_bytes / 1024 ** 2:.2f} MB"
-
-
-def read_dataframe_and_raw(file: UploadFile) -> tuple[pd.DataFrame, bytes]:
-    """
-    Baca file SEKALI, kembalikan (DataFrame, raw_bytes).
-    Ini memperbaiki bug file size = 0 B karena sebelumnya
-    file dibaca dua kali secara terpisah.
-    """
-    filename = (file.filename or "").lower()
-    raw = file.file.read()
-
-    if not raw:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-
-    bio = io.BytesIO(raw)
-
-    if filename.endswith(".csv"):
-        try:
-            df = pd.read_csv(bio)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse CSV: {e}")
-
-    elif filename.endswith(".txt"):
-        # TXT: coba tab-separated dulu, fallback ke comma
-        try:
-            bio.seek(0)
-            df = pd.read_csv(bio, sep="\t")
-            # Jika hanya 1 kolom, kemungkinan bukan TSV — coba comma
-            if df.shape[1] == 1:
-                bio.seek(0)
-                df = pd.read_csv(bio, sep=",")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse TXT: {e}")
-
-    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
-        try:
-            df = pd.read_excel(bio, engine="openpyxl")
-        except ValueError:
-            try:
-                bio.seek(0)
-                df = pd.read_excel(bio)
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Could not parse Excel: {e}")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Could not parse Excel: {e}")
-
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
-        )
-
-    return df, raw
-
-
-# -----------------------------
-# Analysis functions
-# -----------------------------
-
-def describe_numeric(df: pd.DataFrame) -> Dict[str, Any]:
-    num_cols = df.select_dtypes(include=["int64", "float64"]).columns
-    results: Dict[str, Dict[str, Any]] = {}
-
-    for col in num_cols:
-        series = df[col].dropna()
-        n_total = len(df[col])
-        n_valid = len(series)
-        n_missing = n_total - n_valid
-        pct_missing = (n_missing / n_total * 100) if n_total else 0.0
-
-        mean_val = series.mean()
-        median_val = series.median()
-        mode_series = series.mode()
-        mode_val = mode_series.iloc[0] if not mode_series.empty else np.nan
-        std_val = series.std(ddof=1)
-        var_val = series.var(ddof=1)
-        q1 = series.quantile(0.25)
-        q3 = series.quantile(0.75)
-        iqr = q3 - q1
-        skew_val = series.skew()
-        kurt_val = series.kurt()
-
-        # Shapiro-Wilk normality test (max 5000 samples)
-        is_normal = "Not Normal"
-        if len(series) >= 3:
-            sample = series.sample(min(len(series), 5000), random_state=42)
-            try:
-                _, p_sw = scipy_stats.shapiro(sample)
-                is_normal = "Normal" if p_sw >= 0.05 else "Not Normal"
-            except Exception:
-                is_normal = "Not Normal"
-
-        # Outliers via IQR method
-        n_outlier = 0
-        if len(series) >= 1:
-            lower = q1 - 1.5 * iqr
-            upper = q3 + 1.5 * iqr
-            n_outlier = int(((series < lower) | (series > upper)).sum())
-
-        results[col] = {
-            "count": int(n_valid),
-            "missing": int(n_missing),
-            "missing_%": round(float(pct_missing), 2),
-            "mean": round(float(mean_val), 4) if pd.notna(mean_val) else None,
-            "median": round(float(median_val), 4) if pd.notna(median_val) else None,
-            "mode": round(float(mode_val), 4) if pd.notna(mode_val) else None,
-            "std": round(float(std_val), 4) if pd.notna(std_val) else None,
-            "variance": round(float(var_val), 4) if pd.notna(var_val) else None,
-            "min": round(float(series.min()), 4) if len(series) else None,
-            "Q1 (25%)": round(float(q1), 4) if pd.notna(q1) else None,
-            "Q3 (75%)": round(float(q3), 4) if pd.notna(q3) else None,
-            "max": round(float(series.max()), 4) if len(series) else None,
-            "IQR": round(float(iqr), 4) if pd.notna(iqr) else None,
-            "skewness": round(float(skew_val), 4) if pd.notna(skew_val) else None,
-            "kurtosis": round(float(kurt_val), 4) if pd.notna(kurt_val) else None,
-            "distribution": is_normal,
-            "n_outliers": int(n_outlier),
-        }
-
-    return {"table": sanitize_obj(pd.DataFrame(results).T)}
-
-
-def describe_categorical(df: pd.DataFrame) -> Dict[str, Any]:
-    cat_cols = df.select_dtypes(include=["object", "string"]).columns
-    results: Dict[str, Dict[str, Any]] = {}
-
-    for col in cat_cols:
-        series = df[col]
-        n_total = len(series)
-        n_missing = int(series.isna().sum())
-        clean = series.dropna()
-        n_valid = len(clean)
-        n_unique = int(clean.nunique())
-
-        mode_series = clean.mode()
-        mode_val = mode_series.iloc[0] if not mode_series.empty else "N/A"
-        mode_freq = int((clean == mode_val).sum()) if n_valid else 0
-        mode_pct = round((mode_freq / n_valid) * 100, 2) if n_valid > 0 else 0.0
-        pct_missing = round((n_missing / n_total) * 100, 2) if n_total else 0.0
-
-        results[col] = {
-            "count": int(n_valid),
-            "missing": int(n_missing),
-            "missing_%": pct_missing,
-            "unique": n_unique,
-            "mode": sanitize_value(mode_val),
-            "mode_freq": mode_freq,
-            "mode_%": mode_pct,
-        }
-
-    return {"table": sanitize_obj(pd.DataFrame(results).T)}
-
-
-def build_dataset_preview(df: pd.DataFrame, n_head: int = 10) -> Dict[str, Any]:
-    """
-    Kembalikan preview dataset: kolom, tipe data, sample baris pertama,
-    dan ringkasan missing values per kolom.
-    """
-    columns_info = []
-    for col in df.columns:
-        dtype = str(df[col].dtype)
-        # Kategorisasi tipe untuk frontend
-        if dtype in ("int64", "float64"):
-            col_type = "numerical"
-        elif dtype in ("object", "string"):
-            col_type = "categorical"
-        elif "datetime" in dtype:
-            col_type = "datetime"
-        else:
-            col_type = "other"
-
-        n_missing = int(df[col].isna().sum())
-        pct_missing = round(n_missing / len(df) * 100, 2) if len(df) else 0.0
-
-        columns_info.append({
-            "name": str(col),
-            "dtype": dtype,
-            "type": col_type,
-            "missing": n_missing,
-            "missing_%": pct_missing,
-        })
-
-    # Sample rows — convert ke list of dict, sanitize semua nilai
-    sample_rows = df.head(n_head).copy()
-    # Convert datetime ke string agar JSON serializable
-    for col in sample_rows.select_dtypes(include=["datetime64[ns]", "datetimetz"]):
-        sample_rows[col] = sample_rows[col].astype(str)
-
-    rows_data = [
-        {str(k): sanitize_value(v) for k, v in row.items()}
-        for row in sample_rows.to_dict(orient="records")
-    ]
-
-    return {
-        "columns": columns_info,
-        "rows": rows_data,
-        "total_rows": int(len(df)),
-        "total_columns": int(len(df.columns)),
-    }
-
-
-# -----------------------------
-# FastAPI app
-# -----------------------------
+from backend.categorical_analysis import (
+    _manual_cramers_v,
+    _manual_pearson,
+    describe_categorical,
+)
+from backend.descriptive_stats import describe_numeric
+from insights import generate_ai_insight, get_chart_recommendation
+from backend.utils import (
+    ACTIVE_DATASET_META_JSON,
+    ACTIVE_DATASET_PKL,
+    RAW_DIR,
+    SUPPORTED_UPLOAD_EXTENSIONS,
+    build_dataset_preview,
+    cleanup_orphaned_dataset_metadata,
+    get_categorical_columns,
+    get_numeric_columns,
+    is_supported_upload,
+    persist_metadata,
+    read_dataframe_and_raw,
+    sanitize_obj,
+    _format_file_size,
+    _load_active_dataset_df,
+)
+from backend.visualization import (
+    generate_bivariate_plot,
+    generate_categorical_plot,
+    generate_numerical_plot,
+)
 
 app = FastAPI(title="Automation EDA API")
 
@@ -292,33 +53,271 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def _on_startup() -> None:
+    cleanup_orphaned_dataset_metadata()
+
+
+@app.get("/")
+async def health_check() -> Dict[str, Any]:
+    cleanup_orphaned_dataset_metadata()
+    return {
+        "status": "ok",
+        "service": "Automation EDA API",
+        "dataset_active": ACTIVE_DATASET_PKL.exists(),
+        "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
+    }
+
+
+def _latest_uploaded_file_path() -> Path | None:
+    if not RAW_DIR.exists():
+        return None
+
+    candidates = []
+    for p in RAW_DIR.iterdir():
+        if p.is_file() and p.suffix.lower() in {".csv", ".txt", ".xlsx", ".xls"}:
+            candidates.append(p)
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    return candidates[0]
+
+
+def _extract_column_stats(df: pd.DataFrame, col: str, col_type: str) -> Dict[str, Any]:
+    col_type = col_type.lower().strip()
+    if col_type == "numerical":
+        result = describe_numeric(df)
+    elif col_type == "categorical":
+        result = describe_categorical(df)
+    else:
+        raise ValueError("Parameter 'type' harus 'numerical' atau 'categorical'.")
+
+    table = result["table"]
+    if col not in table["index"]:
+        raise ValueError(
+            f"Kolom '{col}' tidak ditemukan atau bukan tipe {col_type}."
+        )
+
+    row_idx = table["index"].index(col)
+    return dict(zip(table["columns"], table["data"][row_idx]))
+
+
+def _correlation_strength_label(value: float) -> str:
+    abs_val = abs(value)
+    if abs_val >= 0.7:
+        return "kuat"
+    if abs_val >= 0.4:
+        return "sedang"
+    if abs_val >= 0.2:
+        return "lemah"
+    return "sangat lemah"
+
+
+def _build_bivariate_summary(df: pd.DataFrame, x_col: str, y_col: str) -> Dict[str, Any]:
+    if x_col not in df.columns:
+        raise ValueError(f"Kolom '{x_col}' tidak ditemukan dalam dataset.")
+    if y_col not in df.columns:
+        raise ValueError(f"Kolom '{y_col}' tidak ditemukan dalam dataset.")
+
+    pair = df[[x_col, y_col]].dropna()
+    n_pairs = len(pair)
+    x_num = pd.api.types.is_numeric_dtype(df[x_col])
+    y_num = pd.api.types.is_numeric_dtype(df[y_col])
+
+    summary: Dict[str, Any] = {
+        "x_column": x_col,
+        "y_column": y_col,
+        "n_valid_pairs": n_pairs,
+        "x_dtype": "numerical" if x_num else "categorical",
+        "y_dtype": "numerical" if y_num else "categorical",
+    }
+
+    if n_pairs == 0:
+        summary["measure"] = "no_data"
+        return summary
+
+    if x_num and y_num:
+        valid = pair.copy()
+        valid[x_col] = pd.to_numeric(valid[x_col], errors="coerce")
+        valid[y_col] = pd.to_numeric(valid[y_col], errors="coerce")
+        valid = valid.dropna()
+        r = _manual_pearson(valid[x_col], valid[y_col])
+        summary["measure"] = "pearson_correlation"
+        summary["pearson_r"] = round(float(r), 4)
+        summary["strength_label"] = _correlation_strength_label(r)
+        summary["direction"] = "positif" if r > 0 else ("negatif" if r < 0 else "netral")
+        summary["n_valid_pairs"] = len(valid)
+        summary["x_mean"] = round(float(valid[x_col].mean()), 4)
+        summary["y_mean"] = round(float(valid[y_col].mean()), 4)
+    elif not x_num and not y_num:
+        v = _manual_cramers_v(pair[x_col], pair[y_col])
+        summary["measure"] = "cramers_v"
+        summary["cramers_v"] = round(float(v), 4)
+        summary["strength_label"] = _correlation_strength_label(v)
+        top_combos = (
+            pair.groupby([x_col, y_col]).size().sort_values(ascending=False).head(3)
+        )
+        summary["top_combinations"] = [
+            {"x": str(idx[0]), "y": str(idx[1]), "count": int(cnt)}
+            for idx, cnt in top_combos.items()
+        ]
+    else:
+        num_col = x_col if x_num else y_col
+        cat_col = y_col if x_num else x_col
+        grouped = pair.copy()
+        grouped[num_col] = pd.to_numeric(grouped[num_col], errors="coerce")
+        grouped = grouped.dropna(subset=[num_col])
+        stats_df = grouped.groupby(cat_col)[num_col].agg(["mean", "count", "std"])
+        summary["measure"] = "numeric_by_category"
+        summary["numeric_column"] = num_col
+        summary["categorical_column"] = cat_col
+        summary["group_stats"] = {
+            "mean": {
+                str(k): round(float(v), 4)
+                for k, v in stats_df["mean"].items()
+            },
+            "count": {str(k): int(v) for k, v in stats_df["count"].items()},
+            "std": {
+                str(k): round(float(v), 4) if pd.notna(v) else None
+                for k, v in stats_df["std"].items()
+            },
+        }
+
+    return summary
+
+
+def _resolve_dataframe(file: Optional[UploadFile]) -> pd.DataFrame:
+    if file is not None and file.filename:
+        filename = file.filename
+        lower = (filename or "").lower()
+        if not is_supported_upload(filename):
+            supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type. Use {supported}",
+            )
+        df, raw = read_dataframe_and_raw(file)
+        safe_name = os.path.basename(filename)
+        save_path = RAW_DIR / safe_name
+        with save_path.open("wb") as f:
+            f.write(raw)
+        df.to_pickle(ACTIVE_DATASET_PKL)
+        persist_metadata(
+            file_name=safe_name,
+            df=df,
+            raw_size_bytes=len(raw),
+            original_filename=filename,
+        )
+        return df
+    return _load_active_dataset_df()
+
+
+@app.get("/api/current-dataset")
+async def current_dataset() -> Dict[str, Any]:
+    empty_payload: Dict[str, Any] = {
+        "status": "success",
+        "activated": False,
+        "dataset": None,
+        "preview": None,
+        "numeric_columns": [],
+        "categorical_columns": [],
+    }
+
+    cleanup_orphaned_dataset_metadata()
+
+    if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
+        return empty_payload
+
+    try:
+        df = pd.read_pickle(ACTIVE_DATASET_PKL)
+        with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        preview_data = build_dataset_preview(df, n_head=10)
+
+        return {
+            "status": "success",
+            "activated": True,
+            "dataset": {
+                "fileName": meta.get("fileName", ""),
+                "originalFilename": meta.get("originalFilename", ""),
+                "rows": meta.get("rows", int(len(df))),
+                "columns": meta.get("columns", int(len(df.columns))),
+                "fileSize": meta.get("fileSize", ""),
+                "uploadedAt": meta.get("uploadedAt", ""),
+            },
+            "preview": preview_data,
+            "numeric_columns": get_numeric_columns(df),
+            "categorical_columns": get_categorical_columns(df),
+        }
+    except Exception as e:
+        return {**empty_payload, "_error": str(e)}
+
+
+@app.post("/api/reset")
+async def reset_dataset() -> Dict[str, Any]:
+    deleted: list[str] = []
+
+    if ACTIVE_DATASET_PKL.exists():
+        ACTIVE_DATASET_PKL.unlink()
+        deleted.append(ACTIVE_DATASET_PKL.name)
+
+    if ACTIVE_DATASET_META_JSON.exists():
+        ACTIVE_DATASET_META_JSON.unlink()
+        deleted.append(ACTIVE_DATASET_META_JSON.name)
+
+    if deleted:
+        return {
+            "status": "success",
+            "message": f"Dataset berhasil direset. File yang dihapus: {', '.join(deleted)}",
+            "deleted": deleted,
+        }
+
+    return {
+        "status": "info",
+        "message": "Tidak ada data aktif yang perlu direset. Server sudah dalam keadaan bersih.",
+        "deleted": [],
+    }
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
     filename = file.filename or ""
-    lower = filename.lower()
 
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
+    if not filename.strip():
+        raise HTTPException(status_code=400, detail="No file name provided.")
+
+    if not is_supported_upload(filename):
+        supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type. Use .csv, .xlsx, .xls, or .txt",
+            detail=f"Unsupported file type. Use {supported}",
         )
 
     try:
-        # ✅ Fix: baca file SEKALI saja — df dan raw bytes dari sumber yang sama
         df, raw = read_dataframe_and_raw(file)
+        safe_name = os.path.basename(filename)
+        save_path = RAW_DIR / safe_name
+        with save_path.open("wb") as f:
+            f.write(raw)
+
+        df.to_pickle(ACTIVE_DATASET_PKL)
+        persist_metadata(
+            file_name=safe_name,
+            df=df,
+            raw_size_bytes=len(raw),
+            original_filename=file.filename,
+        )
 
         return {
             "status": "success",
             "metadata": {
-                "fileName": filename,
+                "fileName": safe_name,
                 "rows": int(len(df)),
                 "columns": int(len(df.columns)),
-                "fileSize": _format_file_size(len(raw)),  # ✅ Fix: tidak lagi 0 B
+                "fileSize": _format_file_size(len(raw)),
             },
         }
     except HTTPException:
@@ -328,25 +327,9 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 
 @app.post("/api/preview")
-async def preview(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """
-    Endpoint baru: dataset preview.
-    Mengembalikan info kolom (nama, tipe, missing),
-    sample 10 baris pertama, dan total rows/columns.
-    """
-    filename = file.filename or ""
-    lower = filename.lower()
-
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
-
+async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
     try:
-        df, _ = read_dataframe_and_raw(file)
+        df = _resolve_dataframe(file)
         preview_data = build_dataset_preview(df, n_head=10)
         return {"status": "success", "result": preview_data}
     except HTTPException:
@@ -356,20 +339,9 @@ async def preview(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 
 @app.post("/api/analysis/numeric")
-async def analysis_numeric(file: UploadFile = File(...)) -> Dict[str, Any]:
-    filename = file.filename or ""
-    lower = filename.lower()
-
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
-
+async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
     try:
-        df, _ = read_dataframe_and_raw(file)
+        df = _resolve_dataframe(file)
         return {"status": "success", "result": sanitize_obj(describe_numeric(df))}
     except HTTPException:
         raise
@@ -378,21 +350,201 @@ async def analysis_numeric(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 
 @app.post("/api/analysis/categorical")
-async def analysis_categorical(file: UploadFile = File(...)) -> Dict[str, Any]:
-    filename = file.filename or ""
-    lower = filename.lower()
-
-    if not (
-        lower.endswith(".csv")
-        or lower.endswith(".xlsx")
-        or lower.endswith(".xls")
-        or lower.endswith(".txt")
-    ):
-        raise HTTPException(status_code=400, detail="Unsupported file type")
-
+async def analysis_categorical(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
     try:
-        df, _ = read_dataframe_and_raw(file)
+        df = _resolve_dataframe(file)
         return {"status": "success", "result": sanitize_obj(describe_categorical(df))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/visualization/numerical")
+async def visualization_numerical(
+    col: str = Form(...),
+    chart_type: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        options = generate_numerical_plot(df, col, chart_type)
+        return {
+            "status": "success",
+            "chart_type": chart_type,
+            "column": col,
+            "options": sanitize_obj(options),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/visualization/categorical")
+async def visualization_categorical(
+    col: str = Form(...),
+    chart_type: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        options = generate_categorical_plot(df, col, chart_type)
+        return {
+            "status": "success",
+            "chart_type": chart_type,
+            "column": col,
+            "options": sanitize_obj(options),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/visualization/bivariate")
+async def visualization_bivariate(
+    x_col: str = Form(...),
+    y_col: str = Form(...),
+    chart_type: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        options = generate_bivariate_plot(df, x_col, y_col, chart_type)
+        return {
+            "status": "success",
+            "chart_type": chart_type,
+            "x_col": x_col,
+            "y_col": y_col,
+            "options": sanitize_obj(options),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/univariate")
+async def insights_univariate(
+    col: str = Form(...),
+    type: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        col_type = type.lower().strip()
+        stats = _extract_column_stats(df, col, col_type)
+        stats["column"] = col
+        context = f"univariate_{col_type}"
+        insight = generate_ai_insight(stats, context)
+        return {
+            "status": "success",
+            "column": col,
+            "type": col_type,
+            "stats": sanitize_obj(stats),
+            "insight": insight,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/bivariate")
+async def insights_bivariate(
+    x_col: str = Form(...),
+    y_col: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file)
+        summary = _build_bivariate_summary(df, x_col, y_col)
+        insight = generate_ai_insight(summary, "bivariate")
+        return {
+            "status": "success",
+            "x_col": x_col,
+            "y_col": y_col,
+            "stats": sanitize_obj(summary),
+            "insight": insight,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+# Request schemas for AI Insights
+class TextInsightRequest(BaseModel):
+    stats_summary: Dict[str, Any]
+    context_type: str
+
+
+class ChartRecommendationRequest(BaseModel):
+    column_name: str
+
+
+@app.post("/api/insights/text")
+async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
+    try:
+        insight = generate_ai_insight(payload.stats_summary, payload.context_type)
+        return {
+            "status": "success",
+            "insight": insight
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/insights/recommend-chart")
+async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]:
+    try:
+        df = _load_active_dataset_df()
+        col = payload.column_name
+        if col not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Kolom '{col}' tidak ditemukan dalam dataset aktif."
+            )
+            
+        dtype_str = str(df[col].dtype)
+        if dtype_str in ("int64", "float64"):
+            data_type = "numerical"
+        elif dtype_str in ("object", "string"):
+            data_type = "categorical"
+        elif "datetime" in dtype_str:
+            data_type = "datetime"
+        else:
+            data_type = dtype_str
+            
+        unique_count = int(df[col].nunique())
+        sample_values = sanitize_obj(df[col].dropna().head(5).tolist())
+        
+        recommendation = get_chart_recommendation(
+            column_name=col,
+            data_type=data_type,
+            unique_count=unique_count,
+            sample_values=sample_values
+        )
+        
+        return {
+            "status": "success",
+            "column_name": col,
+            "data_type": data_type,
+            "unique_count": unique_count,
+            "sample_values": sample_values,
+            "recommendation": recommendation
+        }
     except HTTPException:
         raise
     except Exception as e:
