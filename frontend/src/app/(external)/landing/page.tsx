@@ -72,30 +72,30 @@ const TEAM_MEMBERS = [
   },
   {
     id: 5,
-    name: "Anggota Kelima",
-    nim: "123456005",
+    name: "Naifah Edria Arta",
+    nim: "52250056",
     role: "Data Analyst",
-    linkedin: "https://linkedin.com/in/anggota-kelima",
-    github: "https://github.com/anggota-kelima",
-    initials: "AK",
+    linkedin: "https://www.linkedin.com/in/naifah-edria-83460238a/",
+    github: " https://github.com/naifahdria-hue",
+    initials: "NEA",
   },
   {
     id: 6,
-    name: "Anggota Keenam",
-    nim: "123456006",
+    name: "Zidhan Alfarezi Afdi",
+    nim: "52250049",
     role: "UI/UX Designer",
-    linkedin: "https://linkedin.com/in/anggota-keenam",
-    github: "https://github.com/anggota-keenam",
-    initials: "AK",
+    linkedin: "https://www.linkedin.com/in/zidhan-alfarezi-afdi-047b92344?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+    github: "https://github.com/zidhan-08",
+    initials: "ZAA",
   },
   {
     id: 7,
-    name: "Anggota Keenam",
-    nim: "123456006",
+    name: "Syafif Azmi Lontoh",
+    nim: "52250060",
     role: "UI/UX Designer",
-    linkedin: "https://linkedin.com/in/anggota-keenam",
-    github: "https://github.com/anggota-keenam",
-    initials: "AK",
+    linkedin: "https://www.linkedin.com/in/syafif-azmi-lontoh-b2589a38b/",
+    github: "https://github.com/Syafifazmi",
+    initials: "SAL",
   },
 ];
 
@@ -336,61 +336,60 @@ export default function LandingPage() {
               return (
                 <div
                   key={member.id}
-                  className={`group flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted/20 ${
-                    isLast ? "sm:col-span-2 lg:col-span-1 lg:col-start-2" : ""
-                  }`}
+                  className={`group flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted/20 ${isLast ? "sm:col-span-2 lg:col-span-1 lg:col-start-2" : ""
+                    }`}
                 >
-                {/* Avatar */}
-                <div className="relative shrink-0 size-14">
-                  <img
-                    src={`${member.github}.png?size=120`}
-                    alt={`Foto ${member.name}`}
-                    width={56}
-                    height={56}
-                    className="size-14 rounded-full object-cover ring-1 ring-border"
-                    onError={(e) => {
-                      const el = e.currentTarget;
-                      el.style.display = "none";
-                      const fallback = el.nextElementSibling as HTMLElement | null;
-                      if (fallback) fallback.style.display = "flex";
-                    }}
-                  />
-                  {/* Fallback inisial */}
-                  <div
-                    style={{ display: "none" }}
-                    className="absolute inset-0 flex items-center justify-center rounded-full bg-muted text-foreground text-sm font-semibold ring-1 ring-border"
-                  >
-                    {member.initials}
+                  {/* Avatar */}
+                  <div className="relative shrink-0 size-14">
+                    <img
+                      src={`${member.github}.png?size=120`}
+                      alt={`Foto ${member.name}`}
+                      width={56}
+                      height={56}
+                      className="size-14 rounded-full object-cover ring-1 ring-border"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        const fallback = el.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                    />
+                    {/* Fallback inisial */}
+                    <div
+                      style={{ display: "none" }}
+                      className="absolute inset-0 flex items-center justify-center rounded-full bg-muted text-foreground text-sm font-semibold ring-1 ring-border"
+                    >
+                      {member.initials}
+                    </div>
                   </div>
-                </div>
 
-                {/* Info */}
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <h3 className="truncate text-sm font-semibold text-foreground">{member.name}</h3>
-                  <p className="text-xs text-muted-foreground">{member.role}</p>
-                  <p className="font-mono text-xs text-muted-foreground/70">{member.nim}</p>
-                </div>
+                  {/* Info */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <h3 className="truncate text-sm font-semibold text-foreground">{member.name}</h3>
+                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                    <p className="font-mono text-xs text-muted-foreground/70">{member.nim}</p>
+                  </div>
 
-                {/* Links */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <a
-                    href={member.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`LinkedIn ${member.name}`}
-                    className="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <LinkedinIcon className="size-3.5" />
-                  </a>
-                  <a
-                    href={member.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`GitHub ${member.name}`}
-                    className="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <GithubIcon className="size-3.5" />
-                  </a>
+                  {/* Links */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <a
+                      href={member.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`LinkedIn ${member.name}`}
+                      className="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <LinkedinIcon className="size-3.5" />
+                    </a>
+                    <a
+                      href={member.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`GitHub ${member.name}`}
+                      className="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <GithubIcon className="size-3.5" />
+                    </a>
                   </div>
                 </div>
               );
