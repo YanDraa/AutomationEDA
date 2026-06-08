@@ -181,6 +181,10 @@ def get_chart_recommendation(
 
 def _fallback_insight(stats_summary: dict, context_type: str) -> str:
     ctx = context_type.lower().strip()
+    if "overview" in ctx or ctx == "dataset_overview":
+        return _fallback_overview(stats_summary)
+    if "summary" in ctx or ctx == "dataset_summary":
+        return _fallback_summary(stats_summary)
     if "numerical" in ctx:
         return _fallback_numerical(stats_summary)
     if "categorical" in ctx:
@@ -188,6 +192,37 @@ def _fallback_insight(stats_summary: dict, context_type: str) -> str:
     if "bivariate" in ctx:
         return _fallback_bivariate(stats_summary)
     return _fallback_generic(stats_summary)
+
+
+def _fallback_overview(s: Dict[str, Any]) -> str:
+    file_name = s.get("file_name", "dataset")
+    rows = s.get("rows", 0)
+    cols = s.get("columns", 0)
+    num_cols = s.get("numeric_columns", 0)
+    cat_cols = s.get("categorical_columns", 0)
+    return (
+        f"- Dataset **{file_name}** memiliki **{rows:,}** baris dan **{cols}** kolom.\n"
+        f"- Terdapat **{num_cols}** kolom numerikal dan **{cat_cols}** kolom kategorikal.\n"
+        f"- Gunakan visualisasi dan statistik deskriptif untuk eksplorasi lebih lanjut.\n"
+        f"- Perhatikan kolom dengan missing value tinggi sebelum analisis lanjutan."
+    )
+
+
+def _fallback_summary(s: Dict[str, Any]) -> str:
+    high_missing = s.get("high_missing_columns", [])
+    points = [
+        f"- Dataset siap dianalisis dengan **{s.get('numeric_columns', 0)}** kolom numerikal "
+        f"dan **{s.get('categorical_columns', 0)}** kolom kategorikal."
+    ]
+    if high_missing:
+        points.append(
+            f"- Kolom dengan missing >10%: **{', '.join(high_missing[:5])}** "
+            f"— pertimbangkan pembersihan data."
+        )
+    else:
+        points.append("- Tidak ada kolom dengan missing value di atas 10%.")
+    points.append("- Lanjutkan eksplorasi dengan visualisasi bivariat untuk menemukan pola hubungan.")
+    return "\n".join(points[:4])
 
 
 def _fallback_numerical(s: Dict[str, Any]) -> str:

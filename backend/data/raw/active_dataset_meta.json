@@ -1,8 +1,8 @@
 {
-  "fileName": "03_data.json",
-  "originalFilename": "03_data.json",
-  "rows": 1826,
-  "columns": 6,
-  "fileSize": "294.90 KB",
-  "uploadedAt": "2026-06-07T10:00:23.018811+00:00"
+  "fileName": "employee_raw_dataset.csv",
+  "originalFilename": "employee_raw_dataset.csv",
+  "rows": 510,
+  "columns": 13,
+  "fileSize": "34.50 KB",
+  "uploadedAt": "2026-06-08T02:47:25.628330+00:00"
 }

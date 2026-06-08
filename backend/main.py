@@ -10,6 +10,7 @@ from pydantic import BaseModel
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from backend.categorical_analysis import (
     _manual_cramers_v,
@@ -33,6 +34,14 @@ from backend.utils import (
     sanitize_obj,
     _format_file_size,
     _load_active_dataset_df,
+)
+from backend.reports import (
+    build_full_report,
+    build_interpretation,
+    build_stats_bundle,
+    dataframe_to_csv_bytes,
+    dataframe_to_xlsx_bytes,
+    report_to_pdf_bytes,
 )
 from backend.visualization import (
     generate_bivariate_plot,
@@ -502,6 +511,104 @@ async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
             "status": "success",
             "insight": insight
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+def _active_dataset_or_404() -> pd.DataFrame:
+    try:
+        return _load_active_dataset_df()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Tidak ada dataset aktif: {e}")
+
+
+@app.get("/api/interpretation")
+async def api_interpretation() -> Dict[str, Any]:
+    try:
+        df = _active_dataset_or_404()
+        result = build_interpretation(df)
+        return {"status": "success", "result": sanitize_obj(result)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.get("/api/reports")
+async def api_reports() -> Dict[str, Any]:
+    try:
+        df = _active_dataset_or_404()
+        report = build_full_report(df)
+        return {"status": "success", "result": sanitize_obj(report)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.get("/api/download/csv")
+async def download_csv() -> StreamingResponse:
+    try:
+        df = _active_dataset_or_404()
+        meta = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                meta = json.load(f)
+        base_name = Path(meta.get("fileName", "dataset")).stem
+        content = dataframe_to_csv_bytes(df)
+        return StreamingResponse(
+            iter([content]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_export.csv"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.get("/api/download/xlsx")
+async def download_xlsx() -> StreamingResponse:
+    try:
+        df = _active_dataset_or_404()
+        meta = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                meta = json.load(f)
+        base_name = Path(meta.get("fileName", "dataset")).stem
+        numeric_stats, categorical_stats = build_stats_bundle(df)
+        content = dataframe_to_xlsx_bytes(df, numeric_stats, categorical_stats)
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.xlsx"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.get("/api/download/pdf")
+async def download_pdf() -> StreamingResponse:
+    try:
+        df = _active_dataset_or_404()
+        meta = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                meta = json.load(f)
+        base_name = Path(meta.get("fileName", "dataset")).stem
+        report = build_full_report(df)
+        content = report_to_pdf_bytes(report)
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.pdf"'},
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
