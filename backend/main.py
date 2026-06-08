@@ -19,6 +19,7 @@ from backend.categorical_analysis import (
 )
 from backend.descriptive_stats import describe_numeric
 from insights import generate_ai_insight, get_chart_recommendation
+
 from backend.utils import (
     ACTIVE_DATASET_META_JSON,
     ACTIVE_DATASET_PKL,
@@ -48,6 +49,8 @@ from backend.visualization import (
     generate_categorical_plot,
     generate_numerical_plot,
 )
+
+
 
 app = FastAPI(title="Automation EDA API")
 
@@ -509,7 +512,118 @@ async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
         insight = generate_ai_insight(payload.stats_summary, payload.context_type)
         return {
             "status": "success",
-            "insight": insight
+            "insight": insight,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/export/report")
+async def export_report() -> Dict[str, Any]:
+
+    try:
+        df = _load_active_dataset_df()
+
+        dataset_meta = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            try:
+                with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                    dataset_meta = json.load(f) or {}
+            except Exception:
+                dataset_meta = {}
+
+        meta_lines = []
+        if dataset_meta:
+            file_name = dataset_meta.get("fileName") or dataset_meta.get("file_name")
+            original_filename = dataset_meta.get("originalFilename") or dataset_meta.get("original_filename")
+            if file_name:
+                meta_lines.append(f"File: {file_name}")
+            if original_filename:
+                meta_lines.append(f"Original: {original_filename}")
+            rows = dataset_meta.get("rows")
+            cols = dataset_meta.get("columns")
+            if rows is not None:
+                meta_lines.append(f"Rows: {rows}")
+            if cols is not None:
+                meta_lines.append(f"Columns: {cols}")
+
+        numeric_cols = get_numeric_columns(df)
+        categorical_cols = get_categorical_columns(df)
+
+        insights_blocks = []
+
+        # Generate a small set of automated insights to keep report readable.
+        # Numerical columns: up to 3 using univariate endpoint logic.
+        from backend.descriptive_stats import describe_numeric as _describe_numeric
+        from backend.categorical_analysis import describe_categorical as _describe_categorical
+
+        if numeric_cols:
+            num_inspect = numeric_cols[:3]
+            num_summary = _describe_numeric(df)
+            table = num_summary.get("table") if isinstance(num_summary, dict) else None
+            for col in num_inspect:
+                try:
+                    if table and col in table.get("index", []):
+                        row_idx = table["index"].index(col)
+                        stats_summary = dict(zip(table["columns"], table["data"][row_idx]))
+                    else:
+                        stats_summary = {"column": col}
+                    stats_summary["column"] = col
+                    insights_blocks.append(
+                        {
+                            "section": f"Univariate Numerical — {col}",
+                            "insight": generate_ai_insight(stats_summary, "univariate_numerical"),
+                            "stats": sanitize_obj(stats_summary),
+                        }
+                    )
+                except Exception:
+                    continue
+
+        if categorical_cols:
+            cat_inspect = categorical_cols[:3]
+            cat_summary = _describe_categorical(df)
+            table = cat_summary.get("table") if isinstance(cat_summary, dict) else None
+            for col in cat_inspect:
+                try:
+                    if table and col in table.get("index", []):
+                        row_idx = table["index"].index(col)
+                        stats_summary = dict(zip(table["columns"], table["data"][row_idx]))
+                    else:
+                        stats_summary = {"column": col}
+                    stats_summary["column"] = col
+                    insights_blocks.append(
+                        {
+                            "section": f"Univariate Categorical — {col}",
+                            "insight": generate_ai_insight(stats_summary, "univariate_categorical"),
+                            "stats": sanitize_obj(stats_summary),
+                        }
+                    )
+                except Exception:
+                    continue
+
+        report_lines = []
+        report_lines.append("Automation EDA — Full Analysis Report")
+        report_lines.append("")
+        if meta_lines:
+            report_lines.extend(meta_lines)
+            report_lines.append("")
+
+        report_lines.append(f"Detected Numeric Columns: {len(numeric_cols)}")
+        report_lines.append(f"Detected Categorical Columns: {len(categorical_cols)}")
+        report_lines.append("")
+
+        for block in insights_blocks:
+            report_lines.append(f"## {block.get('section')}")
+            report_lines.append("")
+            report_lines.append(block.get("insight") or "(insight unavailable)")
+            report_lines.append("")
+
+        report_text = "\n".join(report_lines).strip() + "\n"
+
+        # Return as plain text payload; frontend will create downloadable blob.
+        return {
+            "status": "success",
+            "report_text": report_text,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")

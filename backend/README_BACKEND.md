@@ -4,7 +4,7 @@ Run:
 1) python -m venv .venv
 2) .venv\Scripts\activate   (Windows)
 3) pip install -r requirements.txt
-4) uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+4) uvicorn main:app --reload
 
 Endpoints:
 - GET  /                      (health check)
