@@ -83,7 +83,7 @@ export const sidebarItems: NavGroup[] = [
             url: `${BASE}/visualizations/bivariate`,
           },
           {
-            title: "Heatmap",
+            title: "Multivariate",
             url: `${BASE}/visualizations/multivariate`,
           },
           {
