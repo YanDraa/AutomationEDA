@@ -36,6 +36,8 @@ from backend.utils import (
     _format_file_size,
     _load_active_dataset_df,
 )
+from cleaning import clean_dataset
+
 from backend.reports import (
     build_full_report,
     build_interpretation,
@@ -309,16 +311,22 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
         )
 
     try:
+        # Load uploaded dataframe
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
         save_path = RAW_DIR / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
 
-        df.to_pickle(ACTIVE_DATASET_PKL)
+        # UPDATED: clean immediately after upload
+        cleaned_df, cleaning_summary = clean_dataset(df)
+
+        # Persist cleaned dataset as the active dataset
+        cleaned_df.to_pickle(ACTIVE_DATASET_PKL)
+
         persist_metadata(
             file_name=safe_name,
-            df=df,
+            df=cleaned_df,
             raw_size_bytes=len(raw),
             original_filename=file.filename,
         )
@@ -327,15 +335,75 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
             "status": "success",
             "metadata": {
                 "fileName": safe_name,
-                "rows": int(len(df)),
-                "columns": int(len(df.columns)),
+                "rows": int(len(cleaned_df)),
+                "columns": int(len(cleaned_df.columns)),
                 "fileSize": _format_file_size(len(raw)),
             },
+            "cleaning": cleaning_summary,
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.post("/api/data/clean")
+async def api_data_clean() -> Dict[str, Any]:
+    """Clean the active in-memory dataset (persisted on disk) and return summary."""
+    try:
+        df = _load_active_dataset_df()
+        original_rows = int(len(df))
+
+        cleaned_df, summary = clean_dataset(df)
+
+        cleaned_df.to_pickle(ACTIVE_DATASET_PKL)
+
+        # Update metadata rows/columns while keeping existing original name + size.
+        existing_meta: dict[str, Any] = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            try:
+                with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                    existing_meta = json.load(f) or {}
+            except Exception:
+                existing_meta = {}
+
+        raw_size_bytes: int = 0
+        if isinstance(existing_meta.get("fileSize"), str) and existing_meta.get("fileSize"):
+            # fileSize in JSON is formatted string, we can't reconstruct bytes reliably.
+            # We'll keep the metadata fileSize untouched by re-calling persist_metadata with 0 bytes.
+            # persist_metadata uses _format_file_size so we will compute a best-effort.
+            raw_size_bytes = 0
+
+        # Re-persist metadata but preserve original filename and uploadedAt.
+        original_filename = existing_meta.get("originalFilename", existing_meta.get("original_filename"))
+        uploaded_at = existing_meta.get("uploadedAt")
+        file_name = existing_meta.get("fileName", existing_meta.get("file_name", ""))
+
+        payload = {
+            "fileName": file_name,
+            "originalFilename": original_filename or file_name,
+            "rows": int(len(cleaned_df)),
+            "columns": int(len(cleaned_df.columns)),
+            "fileSize": existing_meta.get("fileSize", _format_file_size(0)),
+            "uploadedAt": uploaded_at or "",
+        }
+        with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+        preview_data = build_dataset_preview(cleaned_df, n_head=10)
+
+        # Ensure summary.original_rows matches the actual loaded df length.
+        summary["original_rows"] = original_rows
+        summary["cleaned_rows"] = int(len(cleaned_df))
+
+        return {
+            "status": "success",
+            "summary": summary,
+            "preview": preview_data,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
 
 
 @app.post("/api/preview")

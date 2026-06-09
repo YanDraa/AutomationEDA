@@ -10,7 +10,9 @@ import {
   Database,
   Hash,
   Tag,
+  Wand2,
   Upload,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +42,15 @@ interface PreviewResult {
   total_rows: number;
   total_columns: number;
 }
+
+interface CleaningSummary {
+  original_rows: number;
+  cleaned_rows: number;
+  duplicates_removed: number;
+  rows_deleted_missing_data: number;
+  columns_standardized: string[];
+}
+
 
 function EmptyState() {
   return (
@@ -82,26 +93,46 @@ function TypeBadge({ type }: { type: ColumnInfo["type"] }) {
 export default function Page() {
   const { dataset } = useDataset();
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [cleaningSummary, setCleaningSummary] = useState<CleaningSummary | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        // gunakan GET endpoint agar auto-load seperti halaman analisis
-        const current = await fetchCurrentDataset();
-        if (!current?.preview) {
+        // Auto-clean by calling backend clean endpoint on page load
+        // so the preview reflects dropping duplicates + dropping any rows with missing values.
+        const cleanRes = await fetch("http://127.0.0.1:8000/api/data/clean", {
+          method: "POST",
+          headers: { "Accept": "application/json" },
+        });
+
+        if (!cleanRes.ok) {
+          throw new Error(`Clean failed (HTTP ${cleanRes.status})`);
+        }
+
+        const cleanData = (await cleanRes.json()) as {
+          status: string;
+          summary?: CleaningSummary;
+          preview?: PreviewResult;
+        };
+
+        if (!cleanData?.preview) {
           setPreview(null);
+          setCleaningSummary(null);
           return;
         }
-        setPreview(current.preview as PreviewResult);
+
+        setPreview(cleanData.preview);
+        setCleaningSummary(cleanData.summary ?? null);
         setPage(0);
       } catch {
-        setError("Gagal memuat preview. Pastikan backend berjalan.");
+        setError("Gagal memuat & membersihkan preview. Pastikan backend berjalan.");
       } finally {
         setLoading(false);
       }
@@ -124,8 +155,14 @@ export default function Page() {
             Dataset: <span className="font-medium text-foreground">{dataset.fileName}</span>
           </p>
         </div>
-        <div />
+        <div className="flex items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
+            <Wand2 className="size-4" />
+            <span className="font-medium">Auto-cleaned on preview load</span>
+          </div>
+        </div>
       </div>
+
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -170,8 +207,47 @@ export default function Page() {
 
       {preview && !loading && (
         <>
+          {/* Cleaning Summary (shown when backend provides it) */}
+          {cleaningSummary && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-muted-foreground text-xs">Total Rows</p>
+                  <p className="mt-1 font-semibold text-lg">
+                    {cleaningSummary.original_rows.toLocaleString()} → {cleaningSummary.cleaned_rows.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card
+                className={
+                  cleaningSummary.duplicates_removed > 0
+                    ? "border border-amber-200 bg-amber-50"
+                    : undefined
+                }
+              >
+                <CardContent className="pt-4">
+                  <p className="text-muted-foreground text-xs">Duplicates Removed</p>
+                  <p className="mt-1 font-semibold text-lg">
+                    {cleaningSummary.duplicates_removed.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-red-50 text-red-900 border border-red-200">
+                <CardContent className="pt-4">
+                  <p className="text-xs font-medium">Rows Deleted</p>
+                  <p className="mt-1 font-semibold text-lg">
+                    Deleted {cleaningSummary.rows_deleted_missing_data.toLocaleString()} rows due to missing/empty data
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Column Info */}
           <Card>
+
             <CardHeader>
               <CardTitle className="text-base">Informasi Kolom</CardTitle>
               <CardDescription>{preview.total_columns} kolom terdeteksi</CardDescription>
