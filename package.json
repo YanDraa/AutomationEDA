@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "papaparse": "^5.5.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2"
+  }
+}
