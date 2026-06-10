@@ -1,10 +1,19 @@
 # TODO
 
-- [ ] Analisis & pahami struktur komponen: `Dataset Information` dan behavior sidebar saat ditutup.
-- [ ] Periksa komponen sidebar yang memuat `DatasetInformationCard`.
-- [ ] Periksa CSS/Tailwind class yang mempengaruhi ukuran/visibility footer navbar saat sidebar collapsible.
-- [ ] Buat perbaikan struktur pada bagian `Dataset Information` (rapih, konsisten spacing, teks tidak loncat).
-- [ ] Perbaiki behavior navbar/header saat sidebar ditutup agar menghilang atau mengecil dengan halus (tanpa layout shift), sesuai desain yang diinginkan.
-- [ ] Update file terkait (kemungkinan: `app-sidebar.tsx` dan/atau layout/inset wrapper).
-- [ ] Jalankan build/lint untuk memastikan tidak ada error.
+## Backend + Frontend sync for automated EDA
+
+- [x] Replace `backend/main.py` with complete implementation of `POST /api/data/analyze` that:
+  - [x] Accepts `UploadFile`
+  - [x] Preserves all rows (no global drops)
+  - [x] Computes `summary_stats`, `pearson_matrix`, `cramers_v_matrix`
+  - [x] Returns `data_preview` = first 50 raw rows as list-of-dicts
+  - [x] Ensures all response values are JSON-safe native Python types
+
+- [ ] Update `frontend/src/app/(main)/dashboard/data-preview/page.tsx`:
+  - [ ] Switch from `/api/data/clean` to `/api/data/analyze`
+  - [ ] Render raw table preview from `response.data.data_preview`
+  - [ ] Generate headers dynamically from preview rows
+  - [ ] Add example access for `summary_stats`, `pearson_matrix`, `cramers_v_matrix`
+
+
 
