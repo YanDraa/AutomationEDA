@@ -108,7 +108,7 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
         <div className="rounded-full bg-muted p-4"><Hash className="size-8 text-muted-foreground" /></div>
         <div>
           <p className="font-medium">Belum ada dataset</p>
@@ -122,7 +122,7 @@ export default function Page() {
   const columns = stats ? Object.keys(stats) : [];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl">Statistik Numerikal</h1>

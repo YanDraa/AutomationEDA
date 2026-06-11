@@ -12,7 +12,7 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
         <div className="rounded-full bg-muted p-4">
           <BarChart2 className="size-8 text-muted-foreground" />
         </div>
@@ -28,7 +28,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       <div>
         <h1 className="font-semibold text-2xl">Descriptive Statistics</h1>
         <p className="mt-1 text-muted-foreground text-sm">

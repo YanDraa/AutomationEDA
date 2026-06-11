@@ -10,7 +10,7 @@ import { WeeklySummaryCard } from "./_components/weekly-summary-card";
 
 export default function Page() {
   return (
-    <div className="grid gap-6 lg:grid-cols-12">
+    <div className="grid w-full max-w-full gap-6 overflow-x-hidden lg:grid-cols-12">
       <section className="lg:col-span-9">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">

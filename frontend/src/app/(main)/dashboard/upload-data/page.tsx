@@ -9,20 +9,28 @@ import {
   FileSpreadsheet,
   FileText,
   FileX2,
-  Trash2,
+  Loader2,
   Upload,
   UploadCloud,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  simulateDatasetFromFile,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   type DatasetInfo,
+  simulateDatasetFromFile,
   useDataset,
 } from "@/context/dataset-context";
 
-// ─── Konstanta ──────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const API_BASE = "http://localhost:8000";
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".txt", ".json"] as const;
 type AcceptedExt = (typeof ACCEPTED_EXTENSIONS)[number];
@@ -33,19 +41,11 @@ const FORMAT_INFO: {
   desc: string;
   icon: React.ElementType;
 }[] = [
-  { ext: ".csv",  label: ".csv",  desc: "Comma-Separated Values",  icon: FileSpreadsheet },
-  { ext: ".xlsx", label: ".xlsx", desc: "Microsoft Excel",         icon: FileSpreadsheet },
-  { ext: ".txt",  label: ".txt",  desc: "Tab/Comma delimited",     icon: FileText        },
-  { ext: ".json", label: ".json", desc: "JavaScript Object Notation", icon: FileJson     },
-  { ext: ".xls",  label: ".xls",  desc: "Legacy Microsoft Excel",    icon: FileSpreadsheet },
-];
-
-const STEPS = [
-  "Upload file dataset",
-  "Lihat preview data",
-  "Analisis statistik deskriptif",
-  "Eksplorasi visualisasi",
-  "Baca interpretasi AI",
+  { ext: ".csv", label: ".csv", desc: "Comma-Separated Values", icon: FileSpreadsheet },
+  { ext: ".xlsx", label: ".xlsx", desc: "Microsoft Excel", icon: FileSpreadsheet },
+  { ext: ".txt", label: ".txt", desc: "Tab/Comma delimited", icon: FileText },
+  { ext: ".json", label: ".json", desc: "JavaScript Object Notation", icon: FileJson },
+  { ext: ".xls", label: ".xls", desc: "Legacy Microsoft Excel", icon: FileSpreadsheet },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -61,29 +61,29 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ─── Komponen utama ───────────────────────────────────────────────────────────
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Page() {
   const router = useRouter();
-  const { setDataset, clearDataset, dataset } = useDataset();
+  const { setDataset } = useDataset();
 
-  const [isParsing, setIsParsing]     = useState(false);
-  const [isDragging, setIsDragging]   = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successFile, setSuccessFile] = useState<string | null>(null);
-  const [fileSize, setFileSize]       = useState<string | null>(null);
+  const [fileSize, setFileSize] = useState<string | null>(null);
 
   const accepted = useMemo(() => ACCEPTED_EXTENSIONS.join(","), []);
 
-  // ── Handler utama ──────────────────────────────────────────────────────────
+  // ── Upload handler: POST to /api/data/analyze → redirect on success ──────────
 
-  const handleFile = useCallback(
+  const handleFileUpload = useCallback(
     async (file: File | null | undefined) => {
       if (!file) return;
 
       if (!isAccepted(file.name)) {
         setError(
-          `Format tidak didukung. Gunakan file ${ACCEPTED_EXTENSIONS.join(", ")}`,
+          `Unsupported format. Please use ${ACCEPTED_EXTENSIONS.join(", ")}`,
         );
         setSuccessFile(null);
         setFileSize(null);
@@ -96,34 +96,63 @@ export default function Page() {
       setIsParsing(true);
 
       try {
-        const result: DatasetInfo = await simulateDatasetFromFile(file);
-        setDataset(result);
-        setSuccessFile(file.name);
-        setFileSize(formatFileSize(file.size));
-        router.push("/dashboard/data-preview");
+        // 1. Upload to the Antigravity EDA engine (POST /api/data/analyze)
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch(`${API_BASE}/api/data/analyze`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(
+            (errBody as Record<string, string>).detail ??
+              `Server returned ${res.status}`,
+          );
+        }
+
+        const json = await res.json();
+
+        if (json.status === "success") {
+          // 2. Update the dataset context for sidebar / other pages
+          try {
+            const datasetResult: DatasetInfo = await simulateDatasetFromFile(file);
+            setDataset(datasetResult);
+          } catch {
+            // Non-critical — sidebar may not update, but redirect still proceeds
+          }
+
+          setSuccessFile(file.name);
+          setFileSize(formatFileSize(file.size));
+
+          // 3. IMMEDIATELY redirect to the data-preview page
+          router.push("/dashboard/data-preview");
+        }
       } catch (e) {
         const message =
           e instanceof Error
             ? e.message
-            : "Gagal membaca file. Pastikan backend berjalan di http://127.0.0.1:8000.";
+            : "Failed to process file. Ensure backend is running at http://localhost:8000.";
         setError(message);
       } finally {
         setIsParsing(false);
       }
     },
-    [setDataset],
+    [setDataset, router],
   );
 
-  // ── Drag & drop handlers ───────────────────────────────────────────────────
+  // ── Drag & drop handlers ────────────────────────────────────────────────────
 
   const onDrop: React.DragEventHandler<HTMLLabelElement> = useCallback(
     (e) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-      void handleFile(e.dataTransfer?.files?.[0]);
+      void handleFileUpload(e.dataTransfer?.files?.[0]);
     },
-    [handleFile],
+    [handleFileUpload],
   );
 
   const onDragOver: React.DragEventHandler<HTMLLabelElement> = useCallback((e) => {
@@ -140,21 +169,10 @@ export default function Page() {
 
   const onChange: React.ChangeEventHandler<HTMLInputElement> = useCallback(
     (e) => {
-      void handleFile(e.target.files?.[0]);
+      void handleFileUpload(e.target.files?.[0]);
       e.target.value = "";
     },
-    [handleFile],
-  );
-
-  const handleClear = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      clearDataset();
-      setSuccessFile(null);
-      setFileSize(null);
-      setError(null);
-    },
-    [clearDataset],
+    [handleFileUpload],
   );
 
   const handleBrowseClick = useCallback((e: React.MouseEvent) => {
@@ -167,31 +185,31 @@ export default function Page() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       {/* Header */}
       <div>
         <h1 className="font-semibold text-2xl">Upload Data</h1>
         <p className="mt-1 text-muted-foreground text-sm">
-          Unggah file dataset Anda untuk memulai analisis EDA otomatis.
+          Upload your dataset file to begin automated EDA analysis.
         </p>
       </div>
 
+      {/* ── Upload Section ── */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* ── Dropzone ── */}
+        {/* Dropzone */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <UploadCloud className="size-5 text-primary" />
-                Unggah File
+                Upload File
               </CardTitle>
               <CardDescription>
-                Seret &amp; lepas file atau klik area di bawah untuk memilih file dari perangkat Anda.
+                Drag &amp; drop a file or click the area below to select from your device.
               </CardDescription>
             </CardHeader>
 
             <CardContent className="flex flex-col gap-4">
-              {/* Dropzone label */}
               <label
                 htmlFor="dataset-upload-input"
                 onDrop={onDrop}
@@ -217,21 +235,27 @@ export default function Page() {
                     isDragging ? "bg-primary/10" : "bg-muted"
                   }`}
                 >
-                  <Upload
-                    className={`size-6 ${
-                      isDragging ? "text-primary" : "text-muted-foreground"
-                    }`}
-                  />
+                  {isParsing ? (
+                    <Loader2 className="size-6 animate-spin text-primary" />
+                  ) : (
+                    <Upload
+                      className={`size-6 ${
+                        isDragging ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    />
+                  )}
                 </div>
 
                 <div>
                   <p className="font-medium text-sm">
-                    {isDragging
-                      ? "Lepaskan file di sini..."
-                      : "Seret & lepas file di sini"}
+                    {isParsing
+                      ? "Processing your dataset..."
+                      : isDragging
+                        ? "Drop file here..."
+                        : "Drag & drop file here"}
                   </p>
                   <p className="mt-1 text-muted-foreground text-xs">
-                    Mendukung{" "}
+                    Supports{" "}
                     {ACCEPTED_EXTENSIONS.map((ext, i) => (
                       <span key={ext}>
                         <span className="font-medium">{ext}</span>
@@ -241,29 +265,14 @@ export default function Page() {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={isParsing}
-                    onClick={handleBrowseClick}
-                  >
-                    {isParsing ? "Memproses..." : "Pilih File"}
-                  </Button>
-
-                  {dataset && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={isParsing}
-                      onClick={handleClear}
-                    >
-                      <Trash2 className="size-3.5" />
-                      Hapus
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isParsing}
+                  onClick={handleBrowseClick}
+                >
+                  {isParsing ? "Processing..." : "Choose File"}
+                </Button>
               </label>
 
               {/* Error */}
@@ -274,17 +283,17 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Success */}
+              {/* Success (briefly shown before redirect) */}
               {successFile && !error && (
                 <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-green-700 text-sm dark:text-green-400">
                   <CheckCircle2 className="size-4 shrink-0" />
                   <span>
                     File{" "}
-                    <span className="font-medium">"{successFile}"</span>
+                    <span className="font-medium">&quot;{successFile}&quot;</span>
                     {fileSize && (
                       <span className="text-muted-foreground"> ({fileSize})</span>
                     )}{" "}
-                    berhasil diunggah. Lihat sidebar untuk detail dataset.
+                    uploaded successfully. Redirecting to preview...
                   </span>
                 </div>
               )}
@@ -292,12 +301,11 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* ── Panel kanan ── */}
+        {/* Right Panel — Supported formats */}
         <div className="flex flex-col gap-4">
-          {/* Format yang didukung */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Format yang Didukung</CardTitle>
+              <CardTitle className="text-base">Supported Formats</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {FORMAT_INFO.map(({ ext, label, desc, icon: Icon }) => (
@@ -311,36 +319,6 @@ export default function Page() {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          {/* Langkah selanjutnya */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Langkah Selanjutnya</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {STEPS.map((step, i) => {
-                const done = i === 0 && !!successFile;
-                return (
-                  <div key={step} className="flex items-center gap-2 text-sm">
-                    <div
-                      className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                        done
-                          ? "bg-green-500 text-white"
-                          : i === 0
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {done ? "✓" : i + 1}
-                    </div>
-                    <span className={done ? "line-through text-muted-foreground" : ""}>
-                      {step}
-                    </span>
-                  </div>
-                );
-              })}
             </CardContent>
           </Card>
         </div>

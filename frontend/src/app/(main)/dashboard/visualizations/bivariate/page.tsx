@@ -53,7 +53,7 @@ function BivariateChartPanel({ numericColumns }: { numericColumns: string[] }) {
 
   const handleGenerate = async () => {
     if (!xCol || !yCol || !chartType) {
-      setError("Pilih kolom X, kolom Y, dan jenis grafik.");
+      setError("Pilih variabel X, variabel Y, dan jenis grafik.");
       return;
     }
     setLoading(true);
@@ -110,19 +110,19 @@ function BivariateChartPanel({ numericColumns }: { numericColumns: string[] }) {
         <div className="flex flex-wrap items-end gap-4">
           <VizFieldSelect
             id="bivariate-x"
-            label="Kolom X"
+            label="Variabel X"
             value={xCol}
             onValueChange={setXCol}
             options={numericColumns}
-            emptyMessage="Tidak ada kolom numerik"
+            emptyMessage="Tidak ada Variabel X"
           />
           <VizFieldSelect
             id="bivariate-y"
-            label="Kolom Y"
+            label="Variabel Y"
             value={yCol}
             onValueChange={setYCol}
             options={numericColumns}
-            emptyMessage="Tidak ada kolom numerik"
+            emptyMessage="Tidak ada Variabel Y"
           />
           <div className="flex min-w-[180px] flex-1 flex-col gap-2">
             <Label htmlFor="bivariate-chart-type">Jenis Grafik</Label>

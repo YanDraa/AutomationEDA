@@ -95,7 +95,7 @@ export default function Page() {
   );
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       {/* Header */}
       <div>
         <h1 className="font-semibold text-2xl">Upload Data</h1>

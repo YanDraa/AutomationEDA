@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart2,
   Download,
+  Eraser,
   FileText,
   LayoutDashboard,
   PieChart,
@@ -53,6 +54,12 @@ export const sidebarItems: NavGroup[] = [
         title: "Data Preview",
         url: `${BASE}/data-preview`,
         icon: Table,
+      },
+      {
+        title: "Data Cleaning",
+        url: `${BASE}/data-cleaning`,
+        icon: Eraser,
+        isNew: true,
       },
       {
         title: "Descriptive Statistics",

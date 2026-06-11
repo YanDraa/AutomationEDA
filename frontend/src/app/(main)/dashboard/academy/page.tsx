@@ -10,7 +10,7 @@ import { UpcomingEvents } from "./_components/upcoming-events";
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex w-full max-w-full flex-col gap-4 overflow-x-hidden">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl tracking-tight">Academy Dashboard</h1>

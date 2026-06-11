@@ -5,7 +5,7 @@ import { TaskReminders } from "./_components/task-reminders";
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex w-full max-w-full flex-col gap-4 overflow-x-hidden md:gap-6">
       <KpiCards />
       <PipelineActivity />
       <TaskReminders />

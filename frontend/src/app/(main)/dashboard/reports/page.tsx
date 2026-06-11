@@ -53,7 +53,7 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
         <div className="rounded-full bg-muted p-4">
           <FileText className="size-8 text-muted-foreground" />
         </div>
@@ -75,7 +75,7 @@ export default function Page() {
   const categoricalCount = report ? Object.keys(report.categorical_stats).length : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl">Reports</h1>
