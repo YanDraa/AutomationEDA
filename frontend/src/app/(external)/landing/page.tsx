@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   motion,
   useMotionValue,
@@ -17,6 +18,7 @@ import {
   type CSSProperties,
   type ReactNode,
   type MouseEvent as ReactMouseEvent,
+  type FormEvent,
 } from "react";
 import {
   ArrowRight,
@@ -38,7 +40,12 @@ import {
   Zap,
   Cpu,
   Activity,
+  LogIn,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { users } from "@/data/users";
 
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -551,10 +558,130 @@ function LiveDashboard() {
  * PAGE
  * ──────────────────────────────────────────────────────────────────────── */
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * LOGIN DIALOG
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    // Simulate slight delay for UX
+    setTimeout(() => {
+      const user = users.find((u) => u.email === email && u.password === password);
+      if (user) {
+        // Store session in localStorage
+        localStorage.setItem("eda_session", JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }));
+        onOpenChange(false);
+        router.push("/dashboard/upload-data");
+      } else {
+        setError("Email atau password salah. Silakan coba lagi.");
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LogIn className="h-5 w-5 text-primary" />
+            Login ke AutomationEDA
+          </DialogTitle>
+          <DialogDescription>
+            Masukkan kredensial untuk melanjutkan ke dashboard analisis.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-email" className="text-sm font-medium">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="test@test.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-password" className="text-sm font-medium">Password</label>
+            <div className="relative">
+              <input
+                id="login-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={4}
+                className="h-9 w-full rounded-md border border-border bg-background px-3 pr-9 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-medium text-background transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+            ) : (
+              <LogIn className="h-4 w-4" />
+            )}
+            {loading ? "Memproses..." : "Masuk"}
+          </button>
+
+          <div className="mt-2 rounded-md border border-border bg-muted/50 p-3">
+            <p className="text-[11px] font-medium text-muted-foreground mb-1.5">Akun testing:</p>
+            <div className="space-y-1 text-[11px] text-muted-foreground font-mono">
+              <p>test@test.com / test123</p>
+              <p>hello@arhamkhnz.com / admin123</p>
+            </div>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * PAGE
+ * ──────────────────────────────────────────────────────────────────────── */
+
 export default function LandingPage() {
   const mounted = useMounted();
   const { scrollY } = useScroll();
   const [navBlur, setNavBlur] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     return scrollY.on("change", (y) => setNavBlur(y > 24));
@@ -614,14 +741,15 @@ export default function LandingPage() {
           </nav>
 
           <MagneticWrap strength={0.2}>
-            <Link
-              href="/dashboard/upload-data"
+            <button
+              type="button"
+              onClick={() => setLoginOpen(true)}
               className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-foreground px-4 py-2 text-sm font-medium text-background transition-all hover:scale-[1.02] hover:shadow-lg"
               data-testid="nav-cta-launch"
             >
               Launch App
               <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </Link>
+            </button>
           </MagneticWrap>
         </div>
       </header>
@@ -679,8 +807,9 @@ export default function LandingPage() {
           <Reveal delay={0.3}>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row" data-testid="hero-ctas">
               <MagneticWrap strength={0.3}>
-                <Link
-                  href="/dashboard/upload-data"
+                <button
+                  type="button"
+                  onClick={() => setLoginOpen(true)}
                   className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-all hover:shadow-2xl hover:shadow-primary/20"
                   data-testid="hero-cta-primary"
                 >
@@ -690,7 +819,7 @@ export default function LandingPage() {
                     aria-hidden
                     className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"
                   />
-                </Link>
+                </button>
               </MagneticWrap>
               <MagneticWrap strength={0.2}>
                 <Link
@@ -980,8 +1109,9 @@ export default function LandingPage() {
               <Reveal delay={0.2}>
                 <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <MagneticWrap strength={0.3}>
-                    <Link
-                      href="/dashboard/upload-data"
+                    <button
+                      type="button"
+                      onClick={() => setLoginOpen(true)}
                       className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background shadow-lg transition-all hover:shadow-2xl hover:shadow-primary/30"
                       data-testid="cta-banner-primary"
                     >
@@ -992,7 +1122,7 @@ export default function LandingPage() {
                         aria-hidden
                         className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"
                       />
-                    </Link>
+                    </button>
                   </MagneticWrap>
                 </div>
               </Reveal>
@@ -1120,6 +1250,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ──────────── LOGIN DIALOG ──────────── */}
+      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }
