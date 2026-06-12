@@ -57,7 +57,7 @@ export const sidebarItems: NavGroup[] = [
       },
       {
         title: "Data Cleaning",
-        url: `${BASE}/data-cleaning`,
+        url: `${BASE}/cleaning`,
         icon: Eraser,
         isNew: true,
       },

@@ -994,18 +994,6 @@ export default function LandingPage() {
                       />
                     </Link>
                   </MagneticWrap>
-                  <MagneticWrap strength={0.2}>
-                    <Link
-                      href="https://github.com/YanDraa/AutomationEDA"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-5 py-3 text-sm font-medium backdrop-blur-md transition-colors hover:bg-card"
-                      data-testid="cta-banner-secondary"
-                    >
-                      <Github className="h-4 w-4" />
-                      Lihat Source Code
-                    </Link>
-                  </MagneticWrap>
                 </div>
               </Reveal>
             </div>

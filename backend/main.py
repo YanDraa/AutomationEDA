@@ -60,10 +60,10 @@ from backend.visualization import (
 from cleaning import clean_dataset
 from insights import generate_ai_insight, get_chart_recommendation
 
-# ── Persistence path for the Antigravity Standardization Engine ───────────────
-# Stored adjacent to main.py so uvicorn CWD always resolves it correctly.
-_ENGINE_PKL = Path(__file__).resolve().parent / "data_raw.pkl"
-_CLEAN_PKL = Path(__file__).resolve().parent / "data_clean.pkl"
+# ── Persistence paths — all files land in backend/data/raw/ ──────────────────
+# RAW_DIR is imported from backend.utils and resolves to  <repo>/backend/data/raw
+_ENGINE_PKL = RAW_DIR / "data_raw.pkl"
+_CLEAN_PKL  = RAW_DIR / "data_clean.pkl"
 
 # ─────────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Automation EDA API")
@@ -305,14 +305,25 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
     try:
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
+
+        # ── 1. Save the original uploaded file to backend/data/raw/<filename> ──
+        RAW_DIR.mkdir(parents=True, exist_ok=True)
         save_path = RAW_DIR / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
-        cleaned_df, cleaning_summary = clean_dataset(df)
-        cleaned_df.to_pickle(ACTIVE_DATASET_PKL)
+
+        # ── 2. Persist raw dataframe as data_raw.pkl inside backend/data/raw/ ──
+        df.to_pickle(_ENGINE_PKL)
+
+        # ── Remove stale cleaned dataset so the app reflects the new upload ──
+        if _CLEAN_PKL.exists():
+            _CLEAN_PKL.unlink()
+
+        # ── 3. Persist raw dataframe as active_dataset.pkl as well ───────────
+        df.to_pickle(ACTIVE_DATASET_PKL)
         persist_metadata(
             file_name=safe_name,
-            df=cleaned_df,
+            df=df,
             raw_size_bytes=len(raw),
             original_filename=file.filename,
         )
@@ -320,11 +331,18 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
             "status": "success",
             "metadata": {
                 "fileName": safe_name,
-                "rows": int(len(cleaned_df)),
-                "columns": int(len(cleaned_df.columns)),
+                "rows": int(len(df)),
+                "columns": int(len(df.columns)),
                 "fileSize": _format_file_size(len(raw)),
+                "savedTo": str(save_path),
             },
-            "cleaning": cleaning_summary,
+            "cleaning": {
+                "original_rows": int(len(df)),
+                "cleaned_rows": int(len(df)),
+                "duplicates_removed": 0,
+                "rows_deleted_missing_data": 0,
+                "columns_standardized": [str(c) for c in df.columns],
+            },
         }
     except HTTPException:
         raise
@@ -397,6 +415,32 @@ async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
 
         # ── 3. Persist cleaned dataset ──────────────────────────────────────
         df.to_pickle(_CLEAN_PKL)
+        df.to_pickle(ACTIVE_DATASET_PKL)
+
+        # ── 3.5. Sync metadata JSON with new rows/columns counts ────────────
+        existing_meta: dict[str, Any] = {}
+        if ACTIVE_DATASET_META_JSON.exists():
+            try:
+                with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                    existing_meta = json.load(f) or {}
+            except Exception:
+                existing_meta = {}
+
+        file_name = existing_meta.get("fileName", "dataset.pkl")
+        original_filename = existing_meta.get("originalFilename", file_name)
+        file_size = existing_meta.get("fileSize", "0 B")
+        uploaded_at = existing_meta.get("uploadedAt", "")
+
+        payload = {
+            "fileName": file_name,
+            "originalFilename": original_filename,
+            "rows": int(len(df)),
+            "columns": int(len(df.columns)),
+            "fileSize": file_size,
+            "uploadedAt": uploaded_at,
+        }
+        with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
 
         # ── 4. Recalculate health metrics ───────────────────────────────────
         dataset_meta = _compute_dataset_meta(df)
@@ -414,6 +458,129 @@ async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
                 "duplicated_before": original_duplicated,
                 "duplicated_after": int(df.duplicated().sum()),
             },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}") from e
+
+
+# ── Cleaning Summary & Execute Endpoints ───────────────────────────────────
+
+class ExecuteCleaningRequest(BaseModel):
+    action: str  # "drop_duplicates" | "impute_missing" | "reset_raw"
+
+
+@app.get("/api/data/cleaning-summary")
+async def api_cleaning_summary() -> Dict[str, Any]:
+    """
+    Return cleaning diagnostics: total rows, columns, duplicated rows,
+    and per-column missing value counts with data types.
+    """
+    try:
+        if _CLEAN_PKL.exists():
+            df = pd.read_pickle(_CLEAN_PKL)
+        elif _ENGINE_PKL.exists():
+            df = pd.read_pickle(_ENGINE_PKL)
+        else:
+            return {"status": "no_data"}
+
+        missing_per_col: List[Dict[str, Any]] = []
+        for col in df.columns:
+            mc = int(df[col].isna().sum())
+            missing_per_col.append({
+                "column": str(col),
+                "type": str(df[col].dtype),
+                "missing_count": mc,
+            })
+
+        return {
+            "status": "success",
+            "total_rows": int(len(df)),
+            "total_columns": int(len(df.columns)),
+            "total_duplicated_rows": int(df.duplicated().sum()),
+            "total_missing_cells": int(df.isna().sum().sum()),
+            "columns_detail": missing_per_col,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}") from e
+
+
+@app.post("/api/data/execute-cleaning")
+async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
+    """
+    Execute a cleaning action and persist result to data_clean.pkl.
+    Actions: drop_duplicates, impute_missing, reset_raw.
+    """
+    try:
+        action = req.action.strip()
+
+        # ── reset_raw: copy raw → clean ────────────────────────────────────
+        if action == "reset_raw":
+            if _ENGINE_PKL.exists():
+                import shutil
+                shutil.copy2(_ENGINE_PKL, _CLEAN_PKL)
+                df = pd.read_pickle(_CLEAN_PKL)
+            elif _CLEAN_PKL.exists():
+                df = pd.read_pickle(_CLEAN_PKL)
+            else:
+                raise HTTPException(status_code=404, detail="No dataset found.")
+
+            return {
+                "status": "success",
+                "message": "Dataset reset to raw data.",
+                "total_rows": int(len(df)),
+                "total_columns": int(len(df.columns)),
+                "total_duplicated_rows": int(df.duplicated().sum()),
+                "total_missing_cells": int(df.isna().sum().sum()),
+            }
+
+        # ── Load working dataframe ─────────────────────────────────────────
+        if _CLEAN_PKL.exists():
+            df = pd.read_pickle(_CLEAN_PKL)
+        elif _ENGINE_PKL.exists():
+            df = pd.read_pickle(_ENGINE_PKL)
+        else:
+            raise HTTPException(status_code=404, detail="No dataset found.")
+
+        msg = ""
+
+        if action == "drop_duplicates":
+            before = int(len(df))
+            df = df.drop_duplicates()
+            removed = before - int(len(df))
+            msg = f"Removed {removed} duplicate row(s). {int(len(df))} rows remaining."
+
+        elif action == "impute_missing":
+            before_missing = int(df.isna().sum().sum())
+            # Numerical → median
+            num_cols = df.select_dtypes(include=["number"]).columns
+            if len(num_cols) > 0:
+                df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+            # Categorical/object → "Unknown"
+            cat_cols = df.select_dtypes(include=["object", "string", "category"]).columns
+            for col in cat_cols:
+                df[col] = df[col].fillna("Unknown")
+            after_missing = int(df.isna().sum().sum())
+            msg = f"Imputed {before_missing - after_missing} missing cell(s). Remaining: {after_missing}."
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_missing, reset_raw",
+            )
+
+        # ── Persist ──────────────────────────────────────────────────────
+        df.to_pickle(_CLEAN_PKL)
+
+        return {
+            "status": "success",
+            "message": msg,
+            "total_rows": int(len(df)),
+            "total_columns": int(len(df.columns)),
+            "total_duplicated_rows": int(df.duplicated().sum()),
+            "total_missing_cells": int(df.isna().sum().sum()),
         }
 
     except HTTPException:

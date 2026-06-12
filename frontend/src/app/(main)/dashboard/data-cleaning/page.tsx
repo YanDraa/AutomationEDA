@@ -139,7 +139,6 @@ export default function Page() {
       const json = await res.json();
 
       if (json.status === "success") {
-        // Update local state instantly from the returned dataset_meta
         const meta = json.dataset_meta ?? {};
         setTotalRows((meta.total_rows as number) ?? 0);
         setTotalCols((meta.total_columns as number) ?? 0);
@@ -390,16 +389,13 @@ export default function Page() {
               3. Structural Text Standardization
             </CardTitle>
             <CardDescription>
-              Bersihkan data teks dengan menghapus spasi gaib (trim whitespace) dan
-              menyamakan huruf menjadi kecil (lowercase) untuk konsistensi data.
+              Standardize text values: trims unnecessary spaces and makes strings lowercase for cleaner categoricals.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Inconsistent capitalization and hidden whitespace ruin categorical EDA
-                (e.g. &quot; Male&quot; vs &quot;male&quot;). This operation strips
-                leading/trailing spaces and converts all text columns to lowercase.
+                Strips leading/trailing white space and converts string columns to lowercase to prevent duplicates due to case mismatch.
               </p>
               <Button
                 onClick={() => executeClean("standardize_text")}
