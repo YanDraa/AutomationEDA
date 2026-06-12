@@ -39,6 +39,9 @@ from backend.reports import (
 from backend.utils import (
     ACTIVE_DATASET_META_JSON,
     ACTIVE_DATASET_PKL,
+    CLEAN_DATASET_PKL,
+    CLEAN_DIR,
+    RAW_DATASET_PKL,
     RAW_DIR,
     SUPPORTED_UPLOAD_EXTENSIONS,
     _format_file_size,
@@ -48,6 +51,7 @@ from backend.utils import (
     get_categorical_columns,
     get_numeric_columns,
     is_supported_upload,
+    migrate_legacy_clean_dataset,
     persist_metadata,
     read_dataframe_and_raw,
     sanitize_obj,
@@ -60,10 +64,11 @@ from backend.visualization import (
 from cleaning import clean_dataset
 from insights import generate_ai_insight, get_chart_recommendation
 
-# ── Persistence paths — all files land in backend/data/raw/ ──────────────────
-# RAW_DIR is imported from backend.utils and resolves to  <repo>/backend/data/raw
-_ENGINE_PKL = RAW_DIR / "data_raw.pkl"
-_CLEAN_PKL  = RAW_DIR / "data_clean.pkl"
+# ── Persistence paths ─────────────────────────────────────────────────────────
+# Raw uploads & engine pickle → backend/data/raw/
+# Cleaned working dataset   → backend/data/clean/
+_ENGINE_PKL = RAW_DATASET_PKL
+_CLEAN_PKL = CLEAN_DATASET_PKL
 
 # ─────────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Automation EDA API")
@@ -81,6 +86,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _on_startup() -> None:
+    migrate_legacy_clean_dataset()
     cleanup_orphaned_dataset_metadata()
 
 
@@ -94,6 +100,11 @@ async def health_check() -> Dict[str, Any]:
         "service": "Automation EDA API",
         "dataset_active": ACTIVE_DATASET_PKL.exists(),
         "engine_pkl_exists": _ENGINE_PKL.exists(),
+        "clean_pkl_exists": _CLEAN_PKL.exists(),
+        "data_dirs": {
+            "raw": str(RAW_DIR),
+            "clean": str(CLEAN_DIR),
+        },
         "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
     }
 
@@ -358,8 +369,8 @@ class CleanActionRequest(BaseModel):
 async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
     """
     Interactive data cleaning endpoint.
-    Reads from data_clean.pkl if it exists, otherwise data_raw.pkl.
-    After cleaning, saves result to data_clean.pkl and returns updated dataset_meta.
+    Reads from data/clean/data_clean.pkl if it exists, otherwise data/raw/data_raw.pkl.
+    After cleaning, saves result to data/clean/data_clean.pkl and returns updated dataset_meta.
     """
     try:
         # ── 1. Load the current working dataset ──────────────────────────────
@@ -510,7 +521,7 @@ async def api_cleaning_summary() -> Dict[str, Any]:
 @app.post("/api/data/execute-cleaning")
 async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
     """
-    Execute a cleaning action and persist result to data_clean.pkl.
+    Execute a cleaning action and persist result to data/clean/data_clean.pkl.
     Actions: drop_duplicates, impute_missing, reset_raw.
     """
     try:

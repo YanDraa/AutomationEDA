@@ -330,23 +330,23 @@ export default function Page() {
             Execute statistical cleaning operations. Each action reads from and persists to data_clean.pkl.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <CardContent className="@container/cleaning-actions">
+          <div className="grid grid-cols-1 gap-3 @md/cleaning-actions:grid-cols-2 @xl/cleaning-actions:grid-cols-3">
             {/* Purge Duplicates */}
             <Button
               variant="outline"
               onClick={() => executeAction("drop_duplicates")}
               disabled={isBusy}
-              className="h-auto flex-col items-start gap-2 py-4 text-left"
+              className="h-auto w-full min-w-0 flex-col items-start gap-2 whitespace-normal py-4 text-left"
             >
               {executing === "drop_duplicates" ? (
-                <Spinner className="size-4" />
+                <Spinner className="size-4 shrink-0" />
               ) : (
-                <Trash2 className="size-4 text-red-500" />
+                <Trash2 className="size-4 shrink-0 text-red-500" />
               )}
-              <div>
-                <p className="font-medium text-sm">Purge Duplicate Rows</p>
-                <p className="text-muted-foreground text-xs">
+              <div className="min-w-0 w-full">
+                <p className="font-medium text-sm leading-snug break-words">Purge Duplicate Rows</p>
+                <p className="text-muted-foreground text-xs leading-relaxed break-words text-pretty">
                   Remove all exact-duplicate rows using drop_duplicates().
                 </p>
               </div>
@@ -357,16 +357,16 @@ export default function Page() {
               variant="outline"
               onClick={() => executeAction("impute_missing")}
               disabled={isBusy}
-              className="h-auto flex-col items-start gap-2 py-4 text-left"
+              className="h-auto w-full min-w-0 flex-col items-start gap-2 whitespace-normal py-4 text-left"
             >
               {executing === "impute_missing" ? (
-                <Spinner className="size-4" />
+                <Spinner className="size-4 shrink-0" />
               ) : (
-                <Sparkles className="size-4 text-blue-500" />
+                <Sparkles className="size-4 shrink-0 text-blue-500" />
               )}
-              <div>
-                <p className="font-medium text-sm">Smart Impute Missing Values</p>
-                <p className="text-muted-foreground text-xs">
+              <div className="min-w-0 w-full">
+                <p className="font-medium text-sm leading-snug break-words">Smart Impute Missing Values</p>
+                <p className="text-muted-foreground text-xs leading-relaxed break-words text-pretty">
                   Numerical → Median · Categorical → &quot;Unknown&quot;.
                 </p>
               </div>
@@ -377,16 +377,16 @@ export default function Page() {
               variant="outline"
               onClick={() => executeAction("reset_raw")}
               disabled={isBusy}
-              className="h-auto flex-col items-start gap-2 py-4 text-left"
+              className="h-auto w-full min-w-0 flex-col items-start gap-2 whitespace-normal py-4 text-left"
             >
               {executing === "reset_raw" ? (
-                <Spinner className="size-4" />
+                <Spinner className="size-4 shrink-0" />
               ) : (
-                <RefreshCw className="size-4 text-amber-500" />
+                <RefreshCw className="size-4 shrink-0 text-amber-500" />
               )}
-              <div>
-                <p className="font-medium text-sm">Reset to Raw Data</p>
-                <p className="text-muted-foreground text-xs">
+              <div className="min-w-0 w-full">
+                <p className="font-medium text-sm leading-snug break-words">Reset to Raw Data</p>
+                <p className="text-muted-foreground text-xs leading-relaxed break-words text-pretty">
                   Overwrite data_clean.pkl with fresh copy from data_raw.pkl.
                 </p>
               </div>

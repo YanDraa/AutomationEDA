@@ -13,10 +13,24 @@ from fastapi import HTTPException, UploadFile
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 RAW_DIR = DATA_DIR / "raw"
+CLEAN_DIR = DATA_DIR / "clean"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+CLEAN_DIR.mkdir(parents=True, exist_ok=True)
+
+RAW_DATASET_PKL = RAW_DIR / "data_raw.pkl"
+CLEAN_DATASET_PKL = CLEAN_DIR / "data_clean.pkl"
 
 ACTIVE_DATASET_PKL = RAW_DIR / "active_dataset.pkl"
 ACTIVE_DATASET_META_JSON = RAW_DIR / "active_dataset_meta.json"
+
+# Legacy path before clean/ folder existed.
+_LEGACY_CLEAN_DATASET_PKL = RAW_DIR / "data_clean.pkl"
+
+
+def migrate_legacy_clean_dataset() -> None:
+    """Move data_clean.pkl from data/raw/ to data/clean/ if needed."""
+    if _LEGACY_CLEAN_DATASET_PKL.exists() and not CLEAN_DATASET_PKL.exists():
+        _LEGACY_CLEAN_DATASET_PKL.replace(CLEAN_DATASET_PKL)
 
 SUPPORTED_UPLOAD_EXTENSIONS = (".csv", ".xlsx", ".xls", ".txt", ".json")
 _CSV_ENCODINGS = ("utf-8-sig", "utf-8", "latin-1", "cp1252")
