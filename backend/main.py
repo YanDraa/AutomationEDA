@@ -16,9 +16,9 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.stats import chi2_contingency
 
@@ -61,6 +61,14 @@ from backend.visualization import (
     generate_categorical_plot,
     generate_numerical_plot,
 )
+from backend.auth import (
+    COOKIE_NAME,
+    authenticate_user,
+    create_access_token,
+    get_user_by_id,
+    verify_token,
+    ACCESS_TOKEN_EXPIRE_DAYS,
+)
 from cleaning import clean_dataset
 from insights import generate_ai_insight, get_chart_recommendation
 
@@ -86,6 +94,61 @@ app.add_middleware(
 async def _on_startup() -> None:
     migrate_legacy_clean_dataset()
     cleanup_orphaned_dataset_metadata()
+
+
+# ─── AUTH ENDPOINTS ───────────────────────────────────────────────────────────
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/auth/login")
+async def auth_login(req: LoginRequest) -> JSONResponse:
+    """Authenticate user and set JWT cookie."""
+    user = authenticate_user(req.email, req.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Email atau password salah.")
+
+    token = create_access_token({"sub": user["id"], "email": user["email"]})
+
+    response = JSONResponse(content={"status": "success", "user": user})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        path="/",
+        max_age=ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 7 days in seconds
+    )
+    return response
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request) -> Dict[str, Any]:
+    """Return current authenticated user info from JWT cookie."""
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token expired or invalid.")
+
+    user = get_user_by_id(payload["sub"])
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found.")
+
+    return {"status": "success", "user": user}
+
+
+@app.post("/api/auth/logout")
+async def auth_logout() -> JSONResponse:
+    """Clear the session cookie."""
+    response = JSONResponse(content={"status": "success", "message": "Logged out."})
+    response.delete_cookie(key=COOKIE_NAME, path="/")
+    return response
 
 
 # ─── JSON SAFETY UTILITIES ───────────────────────────────────────────────────

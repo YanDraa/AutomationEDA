@@ -45,7 +45,6 @@ import {
   EyeOff,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { users } from "@/data/users";
 
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -570,24 +569,32 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simulate slight delay for UX
-    setTimeout(() => {
-      const user = users.find((u) => u.email === email && u.password === password);
-      if (user) {
-        // Store session in localStorage
-        localStorage.setItem("eda_session", JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }));
+    try {
+      const res = await fetch("http://localhost:8000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.status === "success") {
         onOpenChange(false);
         router.push("/dashboard/upload-data");
       } else {
-        setError("Email atau password salah. Silakan coba lagi.");
+        setError(data.detail || "Email atau password salah. Silakan coba lagi.");
       }
+    } catch {
+      setError("Gagal terhubung ke server. Pastikan backend berjalan.");
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (
