@@ -65,8 +65,6 @@ from cleaning import clean_dataset
 from insights import generate_ai_insight, get_chart_recommendation
 
 # ── Persistence paths ─────────────────────────────────────────────────────────
-# Raw uploads & engine pickle → backend/data/raw/
-# Cleaned working dataset   → backend/data/clean/
 _ENGINE_PKL = RAW_DATASET_PKL
 _CLEAN_PKL = CLEAN_DATASET_PKL
 
@@ -90,23 +88,103 @@ async def _on_startup() -> None:
     cleanup_orphaned_dataset_metadata()
 
 
+# ─── JSON SAFETY UTILITIES ───────────────────────────────────────────────────
+
+def clean_json_payload(obj: Any) -> Any:
+    """
+    Recursively scan any dictionary/list and convert:
+    - float('nan'), float('inf'), np.nan → None
+    - np.int64/np.float64 → native Python int/float
+    - np.ndarray → list
+    - pd.Series → list
+    - pd.Timestamp → str
+    Guarantees 100% JSON compliance with zero raw NumPy or NaN leakages.
+    """
+    if isinstance(obj, dict):
+        return {str(k): clean_json_payload(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [clean_json_payload(x) for x in obj]
+    elif isinstance(obj, np.ndarray):
+        return clean_json_payload(obj.tolist())
+    elif isinstance(obj, pd.Series):
+        return clean_json_payload(obj.tolist())
+    elif isinstance(obj, pd.DataFrame):
+        return {
+            "columns": [str(c) for c in obj.columns.tolist()],
+            "index": [str(i) for i in obj.index.tolist()],
+            "data": [[clean_json_payload(v) for v in row] for row in obj.values.tolist()],
+        }
+    elif isinstance(obj, (pd.Timestamp, pd.Timedelta)):
+        return str(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        f = float(obj)
+        return None if (math.isnan(f) or math.isinf(f)) else f
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, float):
+        return None if (math.isnan(obj) or math.isinf(obj)) else obj
+    elif obj is None:
+        return None
+    else:
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
+        return obj
+
+
+def _safe(v: Any) -> Any:
+    """Cast any NumPy scalar to native Python type. Map NaN/NaT/Inf to None."""
+    if isinstance(v, np.integer):
+        return int(v)
+    if isinstance(v, np.floating):
+        f = float(v)
+        return None if (math.isnan(f) or math.isinf(f)) else f
+    if isinstance(v, np.bool_):
+        return bool(v)
+    if isinstance(v, float):
+        return None if (math.isnan(v) or math.isinf(v)) else v
+    if v is np.nan:
+        return None
+    try:
+        if pd.isnull(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return v
+
+
+def _sanitize_preview_records(records: List[Dict]) -> List[Dict]:
+    """Ensure every cell in the preview sample is JSON-serialisable."""
+    clean: List[Dict] = []
+    for row in records:
+        clean_row: Dict[str, Any] = {}
+        for k, v in row.items():
+            clean_row[str(k)] = v if isinstance(v, str) else _safe(v)
+        clean.append(clean_row)
+    return clean
+
+
 # ─── Health check ──────────────────────────────────────────────────────────────
 
 @app.get("/")
 async def health_check() -> Dict[str, Any]:
-    cleanup_orphaned_dataset_metadata()
-    return {
-        "status": "ok",
-        "service": "Automation EDA API",
-        "dataset_active": ACTIVE_DATASET_PKL.exists(),
-        "engine_pkl_exists": _ENGINE_PKL.exists(),
-        "clean_pkl_exists": _CLEAN_PKL.exists(),
-        "data_dirs": {
-            "raw": str(RAW_DIR),
-            "clean": str(CLEAN_DIR),
-        },
-        "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
-    }
+    try:
+        cleanup_orphaned_dataset_metadata()
+        return {
+            "status": "ok",
+            "service": "Automation EDA API",
+            "dataset_active": ACTIVE_DATASET_PKL.exists(),
+            "engine_pkl_exists": _ENGINE_PKL.exists(),
+            "clean_pkl_exists": _CLEAN_PKL.exists(),
+            "data_dirs": {"raw": str(RAW_DIR), "clean": str(CLEAN_DIR)},
+            "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
 
 
 # ─── Internal helpers ──────────────────────────────────────────────────────────
@@ -160,8 +238,7 @@ def _build_bivariate_summary(df: pd.DataFrame, x_col: str, y_col: str) -> Dict[s
     x_num = pd.api.types.is_numeric_dtype(df[x_col])
     y_num = pd.api.types.is_numeric_dtype(df[y_col])
     summary: Dict[str, Any] = {
-        "x_column": x_col,
-        "y_column": y_col,
+        "x_column": x_col, "y_column": y_col,
         "n_valid_pairs": n_pairs,
         "x_dtype": "numerical" if x_num else "categorical",
         "y_dtype": "numerical" if y_num else "categorical",
@@ -205,10 +282,7 @@ def _build_bivariate_summary(df: pd.DataFrame, x_col: str, y_col: str) -> Dict[s
         summary["group_stats"] = {
             "mean": {str(k): round(float(v), 4) for k, v in stats_df["mean"].items()},
             "count": {str(k): int(v) for k, v in stats_df["count"].items()},
-            "std": {
-                str(k): round(float(v), 4) if pd.notna(v) else None
-                for k, v in stats_df["std"].items()
-            },
+            "std": {str(k): round(float(v), 4) if pd.notna(v) else None for k, v in stats_df["std"].items()},
         }
     return summary
 
@@ -218,56 +292,57 @@ def _resolve_dataframe(file: Optional[UploadFile]) -> pd.DataFrame:
         filename = file.filename
         if not is_supported_upload(filename):
             supported = ", ".join(SUPPORTED_UPLOAD_EXTENSIONS)
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported file type. Use {supported}",
-            )
+            raise HTTPException(status_code=400, detail=f"Unsupported file type. Use {supported}")
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
         save_path = RAW_DIR / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
         df.to_pickle(ACTIVE_DATASET_PKL)
-        persist_metadata(
-            file_name=safe_name,
-            df=df,
-            raw_size_bytes=len(raw),
-            original_filename=filename,
-        )
+        persist_metadata(file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=filename)
         return df
     return _load_active_dataset_df()
 
 
-# ─── Existing endpoints (fully preserved) ─────────────────────────────────────
+def _load_working_dataframe() -> pd.DataFrame:
+    """Load from data_clean.pkl if available, fallback to data_raw.pkl."""
+    try:
+        if _CLEAN_PKL.exists():
+            return pd.read_pickle(_CLEAN_PKL)
+        elif _ENGINE_PKL.exists():
+            return pd.read_pickle(_ENGINE_PKL)
+        else:
+            raise HTTPException(status_code=404, detail="No dataset found. Upload data first.")
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"Dataset file not found: {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load dataset: {e}")
+
+
+# ─── Existing endpoints ───────────────────────────────────────────────────────
 
 @app.get("/api/current-dataset")
 async def current_dataset() -> Dict[str, Any]:
     empty_payload: Dict[str, Any] = {
-        "status": "success",
-        "activated": False,
-        "dataset": None,
-        "preview": None,
-        "numeric_columns": [],
-        "categorical_columns": [],
+        "status": "success", "activated": False, "dataset": None,
+        "preview": None, "numeric_columns": [], "categorical_columns": [],
     }
-    cleanup_orphaned_dataset_metadata()
-    if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
-        return empty_payload
     try:
+        cleanup_orphaned_dataset_metadata()
+        if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
+            return empty_payload
         df = pd.read_pickle(ACTIVE_DATASET_PKL)
         with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
             meta = json.load(f)
         preview_data = build_dataset_preview(df, n_head=10)
         return {
-            "status": "success",
-            "activated": True,
+            "status": "success", "activated": True,
             "dataset": {
-                "fileName": meta.get("fileName", ""),
-                "originalFilename": meta.get("originalFilename", ""),
-                "rows": meta.get("rows", int(len(df))),
-                "columns": meta.get("columns", int(len(df.columns))),
-                "fileSize": meta.get("fileSize", ""),
-                "uploadedAt": meta.get("uploadedAt", ""),
+                "fileName": meta.get("fileName", ""), "originalFilename": meta.get("originalFilename", ""),
+                "rows": meta.get("rows", int(len(df))), "columns": meta.get("columns", int(len(df.columns))),
+                "fileSize": meta.get("fileSize", ""), "uploadedAt": meta.get("uploadedAt", ""),
             },
             "preview": preview_data,
             "numeric_columns": get_numeric_columns(df),
@@ -279,30 +354,17 @@ async def current_dataset() -> Dict[str, Any]:
 
 @app.post("/api/reset")
 async def reset_dataset() -> Dict[str, Any]:
-    deleted: list[str] = []
-    if ACTIVE_DATASET_PKL.exists():
-        ACTIVE_DATASET_PKL.unlink()
-        deleted.append(ACTIVE_DATASET_PKL.name)
-    if ACTIVE_DATASET_META_JSON.exists():
-        ACTIVE_DATASET_META_JSON.unlink()
-        deleted.append(ACTIVE_DATASET_META_JSON.name)
-    if _ENGINE_PKL.exists():
-        _ENGINE_PKL.unlink()
-        deleted.append(_ENGINE_PKL.name)
-    if _CLEAN_PKL.exists():
-        _CLEAN_PKL.unlink()
-        deleted.append(_CLEAN_PKL.name)
-    if deleted:
-        return {
-            "status": "success",
-            "message": f"Dataset berhasil direset. File yang dihapus: {', '.join(deleted)}",
-            "deleted": deleted,
-        }
-    return {
-        "status": "info",
-        "message": "Tidak ada data aktif yang perlu direset. Server sudah dalam keadaan bersih.",
-        "deleted": [],
-    }
+    try:
+        deleted: list[str] = []
+        for p in [ACTIVE_DATASET_PKL, ACTIVE_DATASET_META_JSON, _ENGINE_PKL, _CLEAN_PKL]:
+            if p.exists():
+                p.unlink()
+                deleted.append(p.name)
+        if deleted:
+            return {"status": "success", "message": f"Dataset reset. Deleted: {', '.join(deleted)}", "deleted": deleted}
+        return {"status": "info", "message": "No active data to reset.", "deleted": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reset failed: {e}")
 
 
 @app.post("/api/upload")
@@ -316,44 +378,21 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
     try:
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
-
-        # ── 1. Save the original uploaded file to backend/data/raw/<filename> ──
         RAW_DIR.mkdir(parents=True, exist_ok=True)
         save_path = RAW_DIR / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
-
-        # ── 2. Persist raw dataframe as data_raw.pkl inside backend/data/raw/ ──
         df.to_pickle(_ENGINE_PKL)
-
-        # ── Remove stale cleaned dataset so the app reflects the new upload ──
         if _CLEAN_PKL.exists():
             _CLEAN_PKL.unlink()
-
-        # ── 3. Persist raw dataframe as active_dataset.pkl as well ───────────
         df.to_pickle(ACTIVE_DATASET_PKL)
-        persist_metadata(
-            file_name=safe_name,
-            df=df,
-            raw_size_bytes=len(raw),
-            original_filename=file.filename,
-        )
+        persist_metadata(file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=file.filename)
         return {
             "status": "success",
-            "metadata": {
-                "fileName": safe_name,
-                "rows": int(len(df)),
-                "columns": int(len(df.columns)),
-                "fileSize": _format_file_size(len(raw)),
-                "savedTo": str(save_path),
-            },
-            "cleaning": {
-                "original_rows": int(len(df)),
-                "cleaned_rows": int(len(df)),
-                "duplicates_removed": 0,
-                "rows_deleted_missing_data": 0,
-                "columns_standardized": [str(c) for c in df.columns],
-            },
+            "metadata": {"fileName": safe_name, "rows": int(len(df)), "columns": int(len(df.columns)),
+                         "fileSize": _format_file_size(len(raw)), "savedTo": str(save_path)},
+            "cleaning": {"original_rows": int(len(df)), "cleaned_rows": int(len(df)), "duplicates_removed": 0,
+                         "rows_deleted_missing_data": 0, "columns_standardized": [str(c) for c in df.columns]},
         }
     except HTTPException:
         raise
@@ -362,73 +401,48 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 
 class CleanActionRequest(BaseModel):
-    action: str  # "drop_duplicates" | "impute_mean" | "impute_median" | "impute_mode" | "drop_missing_rows" | "standardize_text"
+    action: str
 
 
 @app.post("/api/data/clean")
 async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
-    """
-    Interactive data cleaning endpoint.
-    Reads from data/clean/data_clean.pkl if it exists, otherwise data/raw/data_raw.pkl.
-    After cleaning, saves result to data/clean/data_clean.pkl and returns updated dataset_meta.
-    """
+    """Interactive data cleaning. Reads clean→raw fallback, saves to data_clean.pkl."""
     try:
-        # ── 1. Load the current working dataset ──────────────────────────────
-        if _CLEAN_PKL.exists():
-            df = pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            df = pd.read_pickle(_ENGINE_PKL)
-        else:
-            raise HTTPException(status_code=404, detail="No dataset found. Upload data first.")
-
+        df = _load_working_dataframe()
         original_rows = int(len(df))
         original_missing = int(df.isna().sum().sum())
         original_duplicated = int(df.duplicated().sum())
-
-        # ── 2. Apply the requested cleaning action ───────────────────────────
         action = req.action.strip()
 
         if action == "drop_duplicates":
-            df = df.drop_duplicates()
-
+            df = df.drop_duplicates().reset_index(drop=True)
         elif action == "impute_mean":
-            numeric_cols = df.select_dtypes(include=["number"]).columns
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
                 df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
-
         elif action == "impute_median":
-            numeric_cols = df.select_dtypes(include=["number"]).columns
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
                 df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
-
         elif action == "drop_missing_rows":
-            df = df.dropna()
-
+            df = df.dropna().reset_index(drop=True)
         elif action == "impute_mode":
             for col in df.columns:
                 mode_vals = df[col].mode()
                 if len(mode_vals) > 0:
                     df[col] = df[col].fillna(mode_vals.iloc[0])
-
         elif action == "standardize_text":
             text_cols = df.select_dtypes(include=["object", "string"]).columns
             for col in text_cols:
                 df[col] = df[col].astype(str).str.strip().str.lower()
-                # Replace literal 'nan' strings back to actual NaN
                 df[col] = df[col].replace("nan", pd.NA)
-                # Also replace 'none' and empty strings back to NaN
                 df[col] = df[col].replace({"none": pd.NA, "": pd.NA})
-
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown action: '{action}'. "
-                                "Valid actions: drop_duplicates, impute_mean, impute_median, "
-                                "impute_mode, drop_missing_rows, standardize_text")
+            raise HTTPException(status_code=400, detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_mean, impute_median, impute_mode, drop_missing_rows, standardize_text")
 
-        # ── 3. Persist cleaned dataset ──────────────────────────────────────
         df.to_pickle(_CLEAN_PKL)
         df.to_pickle(ACTIVE_DATASET_PKL)
 
-        # ── 3.5. Sync metadata JSON with new rows/columns counts ────────────
         existing_meta: dict[str, Any] = {}
         if ACTIVE_DATASET_META_JSON.exists():
             try:
@@ -437,97 +451,60 @@ async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
             except Exception:
                 existing_meta = {}
 
-        file_name = existing_meta.get("fileName", "dataset.pkl")
-        original_filename = existing_meta.get("originalFilename", file_name)
-        file_size = existing_meta.get("fileSize", "0 B")
-        uploaded_at = existing_meta.get("uploadedAt", "")
-
-        payload = {
-            "fileName": file_name,
-            "originalFilename": original_filename,
-            "rows": int(len(df)),
-            "columns": int(len(df.columns)),
-            "fileSize": file_size,
-            "uploadedAt": uploaded_at,
+        meta_payload = {
+            "fileName": existing_meta.get("fileName", "dataset.pkl"),
+            "originalFilename": existing_meta.get("originalFilename", existing_meta.get("fileName", "dataset.pkl")),
+            "rows": int(len(df)), "columns": int(len(df.columns)),
+            "fileSize": existing_meta.get("fileSize", "0 B"),
+            "uploadedAt": existing_meta.get("uploadedAt", ""),
         }
         with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+            json.dump(meta_payload, f, ensure_ascii=False, indent=2)
 
-        # ── 4. Recalculate health metrics ───────────────────────────────────
         dataset_meta = _compute_dataset_meta(df)
-
-        return {
-            "status": "success",
-            "action": action,
-            "dataset_meta": dataset_meta,
+        return clean_json_payload({
+            "status": "success", "action": action, "dataset_meta": dataset_meta,
             "changes": {
-                "rows_before": original_rows,
-                "rows_after": int(len(df)),
+                "rows_before": original_rows, "rows_after": int(len(df)),
                 "rows_removed": original_rows - int(len(df)),
-                "missing_before": original_missing,
-                "missing_after": int(df.isna().sum().sum()),
-                "duplicated_before": original_duplicated,
-                "duplicated_after": int(df.duplicated().sum()),
+                "missing_before": original_missing, "missing_after": int(df.isna().sum().sum()),
+                "duplicated_before": original_duplicated, "duplicated_after": int(df.duplicated().sum()),
             },
-        }
-
+        })
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}") from e
 
 
-# ── Cleaning Summary & Execute Endpoints ───────────────────────────────────
-
 class ExecuteCleaningRequest(BaseModel):
-    action: str  # "drop_duplicates" | "impute_missing" | "reset_raw"
+    action: str
 
 
 @app.get("/api/data/cleaning-summary")
 async def api_cleaning_summary() -> Dict[str, Any]:
-    """
-    Return cleaning diagnostics: total rows, columns, duplicated rows,
-    and per-column missing value counts with data types.
-    """
+    """Return cleaning diagnostics with per-column missing value counts."""
     try:
-        if _CLEAN_PKL.exists():
-            df = pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            df = pd.read_pickle(_ENGINE_PKL)
-        else:
-            return {"status": "no_data"}
-
+        df = _load_working_dataframe()
         missing_per_col: List[Dict[str, Any]] = []
         for col in df.columns:
-            mc = int(df[col].isna().sum())
-            missing_per_col.append({
-                "column": str(col),
-                "type": str(df[col].dtype),
-                "missing_count": mc,
-            })
-
-        return {
-            "status": "success",
-            "total_rows": int(len(df)),
-            "total_columns": int(len(df.columns)),
-            "total_duplicated_rows": int(df.duplicated().sum()),
-            "total_missing_cells": int(df.isna().sum().sum()),
+            missing_per_col.append({"column": str(col), "type": str(df[col].dtype), "missing_count": int(df[col].isna().sum())})
+        return clean_json_payload({
+            "status": "success", "total_rows": int(len(df)), "total_columns": int(len(df.columns)),
+            "total_duplicated_rows": int(df.duplicated().sum()), "total_missing_cells": int(df.isna().sum().sum()),
             "columns_detail": missing_per_col,
-        }
+        })
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}") from e
 
 
 @app.post("/api/data/execute-cleaning")
 async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
-    """
-    Execute a cleaning action and persist result to data/clean/data_clean.pkl.
-    Actions: drop_duplicates, impute_missing, reset_raw.
-    """
+    """Execute a cleaning action and persist result to data/clean/data_clean.pkl."""
     try:
         action = req.action.strip()
-
-        # ── reset_raw: copy raw → clean ────────────────────────────────────
         if action == "reset_raw":
             if _ENGINE_PKL.exists():
                 import shutil
@@ -537,63 +514,38 @@ async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
                 df = pd.read_pickle(_CLEAN_PKL)
             else:
                 raise HTTPException(status_code=404, detail="No dataset found.")
+            return clean_json_payload({
+                "status": "success", "message": "Dataset reset to raw data.",
+                "total_rows": int(len(df)), "total_columns": int(len(df.columns)),
+                "total_duplicated_rows": int(df.duplicated().sum()), "total_missing_cells": int(df.isna().sum().sum()),
+            })
 
-            return {
-                "status": "success",
-                "message": "Dataset reset to raw data.",
-                "total_rows": int(len(df)),
-                "total_columns": int(len(df.columns)),
-                "total_duplicated_rows": int(df.duplicated().sum()),
-                "total_missing_cells": int(df.isna().sum().sum()),
-            }
-
-        # ── Load working dataframe ─────────────────────────────────────────
-        if _CLEAN_PKL.exists():
-            df = pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            df = pd.read_pickle(_ENGINE_PKL)
-        else:
-            raise HTTPException(status_code=404, detail="No dataset found.")
-
+        df = _load_working_dataframe()
         msg = ""
-
         if action == "drop_duplicates":
             before = int(len(df))
             df = df.drop_duplicates()
             removed = before - int(len(df))
             msg = f"Removed {removed} duplicate row(s). {int(len(df))} rows remaining."
-
         elif action == "impute_missing":
             before_missing = int(df.isna().sum().sum())
-            # Numerical → median
             num_cols = df.select_dtypes(include=["number"]).columns
             if len(num_cols) > 0:
                 df[num_cols] = df[num_cols].fillna(df[num_cols].median())
-            # Categorical/object → "Unknown"
             cat_cols = df.select_dtypes(include=["object", "string", "category"]).columns
             for col in cat_cols:
                 df[col] = df[col].fillna("Unknown")
             after_missing = int(df.isna().sum().sum())
             msg = f"Imputed {before_missing - after_missing} missing cell(s). Remaining: {after_missing}."
-
         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_missing, reset_raw",
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_missing, reset_raw")
 
-        # ── Persist ──────────────────────────────────────────────────────
         df.to_pickle(_CLEAN_PKL)
-
-        return {
-            "status": "success",
-            "message": msg,
-            "total_rows": int(len(df)),
-            "total_columns": int(len(df.columns)),
-            "total_duplicated_rows": int(df.duplicated().sum()),
-            "total_missing_cells": int(df.isna().sum().sum()),
-        }
-
+        return clean_json_payload({
+            "status": "success", "message": msg,
+            "total_rows": int(len(df)), "total_columns": int(len(df.columns)),
+            "total_duplicated_rows": int(df.duplicated().sum()), "total_missing_cells": int(df.isna().sum().sum()),
+        })
     except HTTPException:
         raise
     except Exception as e:
@@ -605,7 +557,7 @@ async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]
     try:
         df = _resolve_dataframe(file)
         preview_data = build_dataset_preview(df, n_head=10)
-        return {"status": "success", "result": preview_data}
+        return clean_json_payload({"status": "success", "result": preview_data})
     except HTTPException:
         raise
     except Exception as e:
@@ -616,7 +568,7 @@ async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]
 async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
-        return {"status": "success", "result": sanitize_obj(describe_numeric(df))}
+        return clean_json_payload({"status": "success", "result": describe_numeric(df)})
     except HTTPException:
         raise
     except Exception as e:
@@ -627,20 +579,16 @@ async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str,
 async def analysis_categorical(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
-        return {"status": "success", "result": sanitize_obj(describe_categorical(df))}
+        return clean_json_payload({"status": "success", "result": describe_categorical(df)})
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 
-# ── Statistical Visualization Endpoints (Intro Stat Ch.2-3) ─────────────────
 
-class ChartRenderRequest(BaseModel):
-    var_x: str
-    var_y: Optional[str] = None
-    chart_type: str
 
+# ── AI Schema & Chart Render Endpoints ────────────────────────────────────────
 
 def _classify_column_type(df: pd.DataFrame, col: str) -> str:
     """Classify a column as categorical, discrete_numeric, or continuous_numeric."""
@@ -668,47 +616,16 @@ def safe_parse_json(text: str) -> dict:
 
 
 def make_json_safe(obj: Any) -> Any:
-    if isinstance(obj, dict):
-        return {k: make_json_safe(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [make_json_safe(x) for x in obj]
-    elif isinstance(obj, tuple):
-        return tuple(make_json_safe(x) for x in obj)
-    elif isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
-        return int(obj)
-    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
-        if np.isnan(obj) or np.isinf(obj):
-            return None
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return make_json_safe(obj.tolist())
-    elif isinstance(obj, pd.Series):
-        return make_json_safe(obj.tolist())
-    elif pd.isna(obj):
-        return None
-    elif isinstance(obj, (float, int)):
-        if math.isnan(obj) or math.isinf(obj):
-            return None
-        return obj
-    return obj
+    """Alias for clean_json_payload for backward compatibility."""
+    return clean_json_payload(obj)
 
 
 @app.get("/api/data/ai-schema")
 async def api_data_ai_schema() -> Dict[str, Any]:
-    """
-    Load active dataset, perform statistical classification on all columns,
-    and query the configured AI engine (Gemini/Groq) to double-check column classification
-    and return an explanation badge for each data type.
-    """
+    """Load active dataset, classify columns, and query AI engine for validation."""
     try:
-        if _CLEAN_PKL.exists():
-            df = pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            df = pd.read_pickle(_ENGINE_PKL)
-        else:
-            return {"status": "no_data"}
+        df = _load_working_dataframe()
 
-        # 1. Compute rule-based classification baseline
         rule_baseline = {}
         for col in df.columns:
             nunique = int(df[col].dropna().nunique())
@@ -725,68 +642,33 @@ async def api_data_ai_schema() -> Dict[str, Any]:
                 ctype = "Categorical (Qualitative)"
                 recommended = ["Bar Chart", "Grouped Comparison"]
                 reason = f"Qualitative variable with {nunique} categories."
-            
-            rule_baseline[col] = {
-                "type": ctype,
-                "recommended_charts": recommended,
-                "reason": reason
-            }
+            rule_baseline[col] = {"type": ctype, "recommended_charts": recommended, "reason": reason}
 
-        # 2. Extract metadata for AI prompt
         columns_info = {}
         for col in df.columns:
             nunique = int(df[col].dropna().nunique())
             dtype_str = str(df[col].dtype)
             sample_vals = df[col].dropna().head(3).tolist()
-            columns_info[col] = {
-                "dtype": dtype_str,
-                "unique_count": nunique,
-                "sample_values": sample_vals
-            }
+            columns_info[col] = {"dtype": dtype_str, "unique_count": nunique, "sample_values": sample_vals}
 
         sample_dict = df.head(3).to_dict(orient="records")
 
-        # 3. Formulate Prompt
         system_instruction = (
-            "You are a Senior Statistician and Data Science Consultant. Your task is to analyze the schema of a dataset, "
-            "classify each column under strict Intro Statistics Chapters 2 & 3 rules, recommend appropriate chart types, "
-            "and provide a clear explanation for the classification.\n\n"
-            "Rules for Classification:\n"
-            "- 'Categorical (Qualitative)': strings, objects, categories, booleans, or textual columns.\n"
-            "- 'Discrete Numeric': numeric columns with 10 or fewer unique values.\n"
-            "- 'Continuous Numeric': numeric columns with more than 10 unique values.\n\n"
-            "Rules for Recommended Charts (choose from: ['Bar Chart', 'Histogram', 'Boxplot', 'Scatter Plot', 'Grouped Comparison']):\n"
-            "- Histogram, Boxplot: Recommended for Continuous Numeric data.\n"
-            "- Bar Chart: Recommended for Categorical (Qualitative) or Discrete Numeric data.\n"
-            "- Scatter Plot: Recommended for pairs of Continuous Numeric data.\n"
-            "- Grouped Comparison: Recommended when analyzing a numeric column grouped by a categorical column.\n\n"
-            "Return a strict JSON response in the following format:\n"
-            "{\n"
-            "  \"columns\": {\n"
-            "    \"column_name\": {\n"
-            "      \"type\": \"Continuous Numeric\" | \"Discrete Numeric\" | \"Categorical (Qualitative)\",\n"
-            "      \"recommended_charts\": [\"Histogram\", \"Boxplot\"],\n"
-            "      \"reason\": \"A concise 1-sentence statistical explanation explaining why this type and chart recommendation applies.\"\n"
-            "    }\n"
-            "  }\n"
-            "}"
+            "You are a Senior Statistician and Data Science Consultant. Classify each column under Intro Statistics rules:\n"
+            "- 'Categorical (Qualitative)': strings, objects, categories, booleans.\n"
+            "- 'Discrete Numeric': numeric with <= 10 unique values.\n"
+            "- 'Continuous Numeric': numeric with > 10 unique values.\n\n"
+            "Recommended Charts: ['Bar Chart', 'Histogram', 'Boxplot', 'Scatter Plot', 'Grouped Comparison']\n"
+            "Return JSON: {\"columns\": {\"col_name\": {\"type\": str, \"recommended_charts\": [], \"reason\": str}}}"
         )
 
-        prompt_payload = {
-            "columns_schema": columns_info,
-            "3_row_sample": sample_dict,
-            "rule_based_baseline": rule_baseline
-        }
-
+        prompt_payload = {"columns_schema": columns_info, "3_row_sample": sample_dict, "rule_based_baseline": rule_baseline}
         prompt_content = (
-            f"Here is the dataset metadata, 3-row sample, and a rule-based statistical baseline:\n"
-            f"{json.dumps(prompt_payload, indent=2)}\n\n"
-            f"Please review each column. Double check the classification and recommended charts. "
-            f"Provide a clear, concise 1-sentence reason (in English) that serves as an explanation badge for the user. "
-            f"Respond with a single JSON object matching the requested schema. Do not output markdown blocks or extra text."
+            f"Dataset metadata, 3-row sample, and rule-based baseline:\n"
+            f"{json.dumps(prompt_payload, indent=2, default=str)}\n\n"
+            f"Review each column. Provide a concise 1-sentence reason. Return JSON only."
         )
 
-        # 4. Invoke AI Engine (Gemini / Groq)
         ai_result = None
         gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -795,14 +677,8 @@ async def api_data_ai_schema() -> Dict[str, Any]:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel(
-                    "gemini-1.5-flash",
-                    system_instruction=system_instruction
-                )
-                response = model.generate_content(
-                    prompt_content,
-                    generation_config={"response_mime_type": "application/json"}
-                )
+                model = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_instruction)
+                response = model.generate_content(prompt_content, generation_config={"response_mime_type": "application/json"})
                 ai_result = safe_parse_json(response.text)
             except Exception as e:
                 print(f"Gemini schema generation failed: {e}")
@@ -813,182 +689,247 @@ async def api_data_ai_schema() -> Dict[str, Any]:
                 client = Groq(api_key=groq_key)
                 response = client.chat.completions.create(
                     model="llama-3.1-70b-versatile",
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": prompt_content}
-                    ],
+                    messages=[{"role": "system", "content": system_instruction}, {"role": "user", "content": prompt_content}],
                     response_format={"type": "json_object"}
                 )
                 ai_result = safe_parse_json(response.choices[0].message.content)
             except Exception as e:
                 print(f"Groq schema generation failed: {e}")
 
-        # 5. Merge AI findings with the deterministic rule baseline to ensure safety
         final_columns = {}
         for col in df.columns:
             baseline = rule_baseline[col]
             ai_col_data = None
             if ai_result and "columns" in ai_result and col in ai_result["columns"]:
                 ai_col_data = ai_result["columns"][col]
-            
             if ai_col_data:
                 ctype = ai_col_data.get("type")
                 if ctype not in ["Categorical (Qualitative)", "Discrete Numeric", "Continuous Numeric"]:
                     ctype = baseline["type"]
-                
                 recommended = ai_col_data.get("recommended_charts")
                 if not isinstance(recommended, list) or not recommended:
                     recommended = baseline["recommended_charts"]
-                
                 reason = ai_col_data.get("reason")
                 if not reason or not isinstance(reason, str):
                     reason = baseline["reason"]
-                
-                final_columns[col] = {
-                    "type": ctype,
-                    "recommended_charts": recommended,
-                    "reason": reason
-                }
+                final_columns[col] = {"type": ctype, "recommended_charts": recommended, "reason": reason}
             else:
                 final_columns[col] = baseline
 
-        return {
-            "status": "success",
-            "columns": final_columns
-        }
-
+        return clean_json_payload({"status": "success", "columns": final_columns})
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error in ai-schema: {e}")
 
 
+class ChartRenderRequest(BaseModel):
+    scope: str  # "univariate" | "bivariate" | "multivariate" | "timeseries"
+    var_x: Optional[str] = None
+    var_y: Optional[str] = None
+    var_z: Optional[str] = None
+    granularity: Optional[str] = "D"  # "D" | "W" | "M" | None
+
+
 @app.post("/api/data/chart-render")
 async def api_data_chart_render(req: ChartRenderRequest) -> Dict[str, Any]:
-    """
-    Generate chart data based on statistical variable classification.
-    Returns JSON chart_data consumable by the frontend.
-    """
+    """Advanced statistical computation engine for 4 distinct visualization scopes."""
     try:
-        if _CLEAN_PKL.exists():
-            df = pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            df = pd.read_pickle(_ENGINE_PKL)
-        else:
-            raise HTTPException(status_code=404, detail="No dataset found.")
-
-        var_x = req.var_x.strip()
+        df = _load_working_dataframe()
+        scope = req.scope.strip().lower()
+        var_x = (req.var_x or "").strip() or None
         var_y = (req.var_y or "").strip() or None
-        chart_type = req.chart_type.strip()
+        var_z = (req.var_z or "").strip() or None
+        granularity = (req.granularity or "D").strip()
 
-        if var_x not in df.columns:
-            raise HTTPException(status_code=400, detail=f"Column '{var_x}' not found.")
-        if var_y and var_y not in df.columns:
-            raise HTTPException(status_code=400, detail=f"Column '{var_y}' not found.")
-
-        # Compute exact data structure based on the chart type
-        chart_payload = {
-            "status": "success",
-            "type": chart_type,
-            "var_x": var_x,
-            "var_y": var_y,
-        }
-
-        if chart_type == "Histogram":
+        # ── UNIVARIATE ─────────────────────────────────────────────────────
+        if scope == "univariate":
+            if not var_x or var_x not in df.columns:
+                raise HTTPException(status_code=400, detail=f"var_x '{var_x}' not found in dataset.")
+            
+            col_type = _classify_column_type(df, var_x)
             clean = df[var_x].dropna()
-            if len(clean) == 0:
-                chart_payload["chart_data"] = {"categories": [], "values": []}
+            
+            if col_type in ("continuous_numeric", "discrete_numeric"):
+                # Histogram: 10 bins
+                if len(clean) == 0:
+                    hist_data = {"categories": [], "values": []}
+                else:
+                    counts, bin_edges = np.histogram(clean, bins=10)
+                    bin_labels = [f"{bin_edges[i]:.2f} - {bin_edges[i+1]:.2f}" for i in range(len(bin_edges) - 1)]
+                    hist_data = {"categories": bin_labels, "values": [int(c) for c in counts.tolist()]}
+                
+                # Boxplot: five-number summary
+                if len(clean) == 0:
+                    box_data = {"min": 0, "q1": 0, "median": 0, "q3": 0, "max": 0, "lower_whisker": 0, "upper_whisker": 0, "outliers": []}
+                else:
+                    q1 = float(np.percentile(clean, 25))
+                    median = float(np.percentile(clean, 50))
+                    q3 = float(np.percentile(clean, 75))
+                    iqr = q3 - q1
+                    w_lo = max(float(clean.min()), q1 - 1.5 * iqr)
+                    w_hi = min(float(clean.max()), q3 + 1.5 * iqr)
+                    outliers = clean[(clean < w_lo) | (clean > w_hi)]
+                    box_data = {
+                        "min": float(clean.min()), "q1": q1, "median": median, "q3": q3, "max": float(clean.max()),
+                        "lower_whisker": w_lo, "upper_whisker": w_hi, "outliers": [float(v) for v in outliers.tolist()]
+                    }
+                
+                # Summary statistics
+                summary = {
+                    "count": int(len(clean)), "mean": float(clean.mean()), "median": float(clean.median()),
+                    "std": float(clean.std()), "min": float(clean.min()), "max": float(clean.max()),
+                    "q1": q1, "q3": q3, "skewness": float(clean.skew()), "kurtosis": float(clean.kurt()),
+                }
+                
+                return clean_json_payload({
+                    "status": "success", "scope": "univariate", "var_x": var_x, "column_type": col_type,
+                    "histogram": hist_data, "boxplot": box_data, "summary": summary,
+                })
             else:
-                counts, bin_edges = np.histogram(clean, bins=10)
-                bin_labels = [
-                    f"{bin_edges[i]:.2f} - {bin_edges[i + 1]:.2f}"
-                    for i in range(len(bin_edges) - 1)
-                ]
-                chart_payload["chart_data"] = {
-                    "categories": bin_labels,
-                    "values": [int(c) for c in counts.tolist()]
-                }
+                # Categorical: value counts
+                counts = df[var_x].value_counts().head(20)
+                value_counts = [{"category": str(c), "count": int(v)} for c, v in zip(counts.index.tolist(), counts.values.tolist())]
+                return clean_json_payload({
+                    "status": "success", "scope": "univariate", "var_x": var_x, "column_type": col_type,
+                    "value_counts": value_counts, "unique_count": int(df[var_x].nunique()),
+                })
 
-        elif chart_type == "Boxplot":
-            clean = df[var_x].dropna()
-            if len(clean) == 0:
-                chart_payload["box_data"] = {
-                    "min": 0, "q1": 0, "median": 0, "q3": 0, "max": 0,
-                    "lower_whisker": 0, "upper_whisker": 0, "outliers": []
-                }
-            else:
-                q1 = float(np.percentile(clean, 25))
-                median = float(np.percentile(clean, 50))
-                q3 = float(np.percentile(clean, 75))
-                iqr = q3 - q1
-                w_lo = max(float(clean.min()), q1 - 1.5 * iqr)
-                w_hi = min(float(clean.max()), q3 + 1.5 * iqr)
-                outliers = clean[(clean < w_lo) | (clean > w_hi)]
-                chart_payload["box_data"] = {
-                    "min": float(clean.min()),
-                    "q1": q1,
-                    "median": median,
-                    "q3": q3,
-                    "max": float(clean.max()),
-                    "lower_whisker": w_lo,
-                    "upper_whisker": w_hi,
-                    "outliers": [float(v) for v in outliers.tolist()]
-                }
-
-        elif chart_type == "Bar Chart":
-            counts = df[var_x].value_counts().head(10)
-            chart_payload["chart_data"] = {
-                "categories": [str(c) for c in counts.index.tolist()],
-                "values": [int(v) for v in counts.values.tolist()]
-            }
-
-        elif chart_type == "Scatter Plot":
-            if not var_y:
-                raise HTTPException(status_code=400, detail="Scatter Plot requires Variable Y.")
-            pair = df[[var_x, var_y]].dropna()
-            points = []
-            for x, y in zip(pair[var_x], pair[var_y]):
-                val_x = float(x) if isinstance(x, (int, float, np.number)) else x
-                val_y = float(y) if isinstance(y, (int, float, np.number)) else y
-                points.append([val_x, val_y])
-            chart_payload["chart_data"] = {
-                "points": points
-            }
-
-        elif chart_type == "Grouped Comparison":
-            if not var_y:
-                raise HTTPException(status_code=400, detail="Grouped Comparison requires Variable Y.")
+        # ── BIVARIATE ──────────────────────────────────────────────────────
+        elif scope == "bivariate":
+            if not var_x or var_x not in df.columns:
+                raise HTTPException(status_code=400, detail=f"var_x '{var_x}' not found.")
+            if not var_y or var_y not in df.columns:
+                raise HTTPException(status_code=400, detail=f"var_y '{var_y}' not found.")
             
             type_x = _classify_column_type(df, var_x)
             type_y = _classify_column_type(df, var_y)
+            pair = df[[var_x, var_y]].dropna()
             
-            cat_col, num_col = None, None
-            if type_x in ("categorical", "discrete_numeric") and type_y == "continuous_numeric":
-                cat_col, num_col = var_x, var_y
-            elif type_y in ("categorical", "discrete_numeric") and type_x == "continuous_numeric":
-                cat_col, num_col = var_y, var_x
+            # Continuous vs Continuous
+            if type_x in ("continuous_numeric", "discrete_numeric") and type_y in ("continuous_numeric", "discrete_numeric"):
+                x_vals = pd.to_numeric(pair[var_x], errors="coerce").dropna()
+                y_vals = pd.to_numeric(pair[var_y], errors="coerce").dropna()
+                valid_pair = pd.DataFrame({var_x: x_vals, var_y: y_vals}).dropna()
+                
+                if len(valid_pair) < 2:
+                    return clean_json_payload({"status": "success", "scope": "bivariate", "var_x": var_x, "var_y": var_y, "type": "continuous_continuous", "points": [], "regression": None})
+                
+                x_arr = valid_pair[var_x].values
+                y_arr = valid_pair[var_y].values
+                points = [[float(x), float(y)] for x, y in zip(x_arr, y_arr)]
+                
+                # Linear regression
+                slope, intercept = np.polyfit(x_arr, y_arr, 1)
+                y_pred = slope * x_arr + intercept
+                ss_res = np.sum((y_arr - y_pred) ** 2)
+                ss_tot = np.sum((y_arr - np.mean(y_arr)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+                
+                return clean_json_payload({
+                    "status": "success", "scope": "bivariate", "var_x": var_x, "var_y": var_y,
+                    "type": "continuous_continuous", "points": points,
+                    "regression": {"slope": float(slope), "intercept": float(intercept), "r_squared": float(r_squared)},
+                })
+            
+            # Categorical vs Continuous
+            elif (type_x == "categorical" and type_y in ("continuous_numeric", "discrete_numeric")) or \
+                 (type_y == "categorical" and type_x in ("continuous_numeric", "discrete_numeric")):
+                cat_col = var_x if type_x == "categorical" else var_y
+                num_col = var_y if type_x == "categorical" else var_x
+                
+                pair_clean = pair.copy()
+                pair_clean[num_col] = pd.to_numeric(pair_clean[num_col], errors="coerce")
+                pair_clean = pair_clean.dropna()
+                
+                group_means = pair_clean.groupby(cat_col, observed=True)[num_col].mean().sort_values(ascending=False)
+                means_data = [{"category": str(c), "mean": float(v)} for c, v in zip(group_means.index.tolist(), group_means.values.tolist())]
+                
+                # Comparative boxplots
+                boxplots = {}
+                for cat_val in pair_clean[cat_col].unique():
+                    subset = pair_clean[pair_clean[cat_col] == cat_val][num_col]
+                    if len(subset) > 0:
+                        q1 = float(np.percentile(subset, 25))
+                        q3 = float(np.percentile(subset, 75))
+                        boxplots[str(cat_val)] = {
+                            "min": float(subset.min()), "q1": q1, "median": float(np.percentile(subset, 50)),
+                            "q3": q3, "max": float(subset.max()), "count": int(len(subset)),
+                        }
+                
+                return clean_json_payload({
+                    "status": "success", "scope": "bivariate", "var_x": var_x, "var_y": var_y,
+                    "type": "categorical_continuous", "cat_col": cat_col, "num_col": num_col,
+                    "group_means": means_data, "boxplots": boxplots,
+                })
+            
+            # Categorical vs Categorical
             else:
-                is_x_num = pd.api.types.is_numeric_dtype(df[var_x])
-                is_y_num = pd.api.types.is_numeric_dtype(df[var_y])
-                if not is_x_num and is_y_num:
-                    cat_col, num_col = var_x, var_y
-                elif not is_y_num and is_x_num:
-                    cat_col, num_col = var_y, var_x
-                else:
-                    cat_col, num_col = var_x, var_y
+                contingency = pd.crosstab(pair[var_x], pair[var_y], normalize="index") * 100
+                ct_dict = {}
+                for idx_val in contingency.index:
+                    ct_dict[str(idx_val)] = {str(col_val): float(contingency.loc[idx_val, col_val]) for col_val in contingency.columns}
+                
+                return clean_json_payload({
+                    "status": "success", "scope": "bivariate", "var_x": var_x, "var_y": var_y,
+                    "type": "categorical_categorical", "contingency_table": ct_dict,
+                })
 
-            pair = df[[cat_col, num_col]].dropna()
-            grouped = pair.groupby(cat_col, observed=True)[num_col].mean().sort_values(ascending=False)
+        # ── MULTIVARIATE ───────────────────────────────────────────────────
+        elif scope == "multivariate":
+            # Pearson Correlation Matrix
+            numeric_df = df.select_dtypes(include=[np.number])
+            if numeric_df.empty or len(numeric_df.columns) < 2:
+                return clean_json_payload({"status": "success", "scope": "multivariate", "correlation_matrix": {}, "scatter_3d": []})
             
-            chart_payload["chart_data"] = {
-                "categories": [str(c) for c in grouped.index.tolist()],
-                "values": [float(v) if pd.notna(v) else None for v in grouped.values.tolist()],
-                "cat_col": cat_col,
-                "num_col": num_col
-            }
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported chart type: {chart_type}")
+            corr = numeric_df.corr(method="pearson")
+            corr_dict = {str(row): {str(col): float(corr.loc[row, col]) for col in corr.columns} for row in corr.index}
+            
+            # 3-variable scatter if var_x, var_y, var_z provided
+            scatter_3d = []
+            if var_x and var_y and var_z and all(v in df.columns for v in [var_x, var_y, var_z]):
+                subset = df[[var_x, var_y, var_z]].dropna()
+                for _, row in subset.head(500).iterrows():
+                    scatter_3d.append({
+                        "x": float(row[var_x]) if pd.notna(row[var_x]) else None,
+                        "y": float(row[var_y]) if pd.notna(row[var_y]) else None,
+                        "z": str(row[var_z]) if not pd.api.types.is_numeric_dtype(df[var_z]) else float(row[var_z]),
+                    })
+            
+            return clean_json_payload({
+                "status": "success", "scope": "multivariate",
+                "correlation_matrix": corr_dict, "scatter_3d": scatter_3d,
+            })
 
-        # Ensure CRITICAL JSON SAFETY: Cast all numpy structures and Pandas NaNs
-        return make_json_safe(chart_payload)
+        # ── TIMESERIES ─────────────────────────────────────────────────────
+        elif scope == "timeseries":
+            if not var_x or var_x not in df.columns:
+                raise HTTPException(status_code=400, detail=f"var_x (datetime column) '{var_x}' not found.")
+            if not var_y or var_y not in df.columns:
+                raise HTTPException(status_code=400, detail=f"var_y (value column) '{var_y}' not found.")
+            
+            try:
+                df_ts = df[[var_x, var_y]].copy()
+                df_ts[var_x] = pd.to_datetime(df_ts[var_x], errors="coerce")
+                df_ts = df_ts.dropna()
+                df_ts = df_ts.sort_values(var_x)
+                df_ts = df_ts.set_index(var_x)
+                
+                # Resample by granularity
+                gran = granularity if granularity in ("D", "W", "M") else "D"
+                resampled = df_ts[var_y].resample(gran).mean()
+                
+                ts_data = [{"date": str(idx.date()), "value": float(v)} for idx, v in zip(resampled.index, resampled.values) if pd.notna(v)]
+                
+                return clean_json_payload({
+                    "status": "success", "scope": "timeseries", "var_x": var_x, "var_y": var_y,
+                    "granularity": gran, "timeseries": ts_data,
+                })
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Timeseries processing failed: {e}")
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown scope: '{scope}'. Valid: univariate, bivariate, multivariate, timeseries")
 
     except HTTPException:
         raise
@@ -996,21 +937,18 @@ async def api_data_chart_render(req: ChartRenderRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Server error in chart-render: {e}")
 
 
+
+
+# ── Visualization Endpoints (Highcharts) ──────────────────────────────────────
+
 @app.post("/api/visualization/numerical")
 async def visualization_numerical(
-    col: str = Form(...),
-    chart_type: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
 ) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
         options = generate_numerical_plot(df, col, chart_type)
-        return {
-            "status": "success",
-            "chart_type": chart_type,
-            "column": col,
-            "options": sanitize_obj(options),
-        }
+        return clean_json_payload({"status": "success", "chart_type": chart_type, "column": col, "options": options})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -1021,19 +959,12 @@ async def visualization_numerical(
 
 @app.post("/api/visualization/categorical")
 async def visualization_categorical(
-    col: str = Form(...),
-    chart_type: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
 ) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
         options = generate_categorical_plot(df, col, chart_type)
-        return {
-            "status": "success",
-            "chart_type": chart_type,
-            "column": col,
-            "options": sanitize_obj(options),
-        }
+        return clean_json_payload({"status": "success", "chart_type": chart_type, "column": col, "options": options})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -1044,21 +975,12 @@ async def visualization_categorical(
 
 @app.post("/api/visualization/bivariate")
 async def visualization_bivariate(
-    x_col: str = Form(...),
-    y_col: str = Form(...),
-    chart_type: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    x_col: str = Form(...), y_col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
 ) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
         options = generate_bivariate_plot(df, x_col, y_col, chart_type)
-        return {
-            "status": "success",
-            "chart_type": chart_type,
-            "x_col": x_col,
-            "y_col": y_col,
-            "options": sanitize_obj(options),
-        }
+        return clean_json_payload({"status": "success", "chart_type": chart_type, "x_col": x_col, "y_col": y_col, "options": options})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -1067,11 +989,11 @@ async def visualization_bivariate(
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 
+# ── Insights Endpoints ────────────────────────────────────────────────────────
+
 @app.post("/api/insights/univariate")
 async def insights_univariate(
-    col: str = Form(...),
-    type: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    col: str = Form(...), type: str = Form(...), file: Optional[UploadFile] = File(None),
 ) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
@@ -1080,13 +1002,7 @@ async def insights_univariate(
         stats["column"] = col
         context = f"univariate_{col_type}"
         insight = generate_ai_insight(stats, context)
-        return {
-            "status": "success",
-            "column": col,
-            "type": col_type,
-            "stats": sanitize_obj(stats),
-            "insight": insight,
-        }
+        return clean_json_payload({"status": "success", "column": col, "type": col_type, "stats": stats, "insight": insight})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -1097,21 +1013,13 @@ async def insights_univariate(
 
 @app.post("/api/insights/bivariate")
 async def insights_bivariate(
-    x_col: str = Form(...),
-    y_col: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    x_col: str = Form(...), y_col: str = Form(...), file: Optional[UploadFile] = File(None),
 ) -> Dict[str, Any]:
     try:
         df = _resolve_dataframe(file)
         summary = _build_bivariate_summary(df, x_col, y_col)
         insight = generate_ai_insight(summary, "bivariate")
-        return {
-            "status": "success",
-            "x_col": x_col,
-            "y_col": y_col,
-            "stats": sanitize_obj(summary),
-            "insight": insight,
-        }
+        return clean_json_payload({"status": "success", "x_col": x_col, "y_col": y_col, "stats": summary, "insight": insight})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -1133,10 +1041,41 @@ class ChartRecommendationRequest(BaseModel):
 async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
     try:
         insight = generate_ai_insight(payload.stats_summary, payload.context_type)
-        return {"status": "success", "insight": insight}
+        return clean_json_payload({"status": "success", "insight": insight})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
+
+@app.post("/api/insights/recommend-chart")
+async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]:
+    try:
+        df = _load_active_dataset_df()
+        col = payload.column_name
+        if col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{col}' not found in dataset.")
+        dtype_str = str(df[col].dtype)
+        if dtype_str in ("int64", "float64"):
+            data_type = "numerical"
+        elif dtype_str in ("object", "string"):
+            data_type = "categorical"
+        elif "datetime" in dtype_str:
+            data_type = "datetime"
+        else:
+            data_type = dtype_str
+        unique_count = int(df[col].nunique())
+        sample_values = sanitize_obj(df[col].dropna().head(5).tolist())
+        recommendation = get_chart_recommendation(column_name=col, data_type=data_type, unique_count=unique_count, sample_values=sample_values)
+        return clean_json_payload({
+            "status": "success", "column_name": col, "data_type": data_type,
+            "unique_count": unique_count, "sample_values": sample_values, "recommendation": recommendation,
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+# ── Report & Export Endpoints ─────────────────────────────────────────────────
 
 @app.post("/api/export/report")
 async def export_report() -> Dict[str, Any]:
@@ -1166,11 +1105,9 @@ async def export_report() -> Dict[str, Any]:
         numeric_cols = get_numeric_columns(df)
         categorical_cols = get_categorical_columns(df)
         insights_blocks = []
-        from backend.descriptive_stats import describe_numeric as _describe_numeric
-        from backend.categorical_analysis import describe_categorical as _describe_categorical
         if numeric_cols:
             num_inspect = numeric_cols[:3]
-            num_summary = _describe_numeric(df)
+            num_summary = describe_numeric(df)
             table = num_summary.get("table") if isinstance(num_summary, dict) else None
             for col in num_inspect:
                 try:
@@ -1189,7 +1126,7 @@ async def export_report() -> Dict[str, Any]:
                     continue
         if categorical_cols:
             cat_inspect = categorical_cols[:3]
-            cat_summary = _describe_categorical(df)
+            cat_summary = describe_categorical(df)
             table = cat_summary.get("table") if isinstance(cat_summary, dict) else None
             for col in cat_inspect:
                 try:
@@ -1219,7 +1156,7 @@ async def export_report() -> Dict[str, Any]:
             report_lines.append(block.get("insight") or "(insight unavailable)")
             report_lines.append("")
         report_text = "\n".join(report_lines).strip() + "\n"
-        return {"status": "success", "report_text": report_text}
+        return clean_json_payload({"status": "success", "report_text": report_text})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
@@ -1230,7 +1167,7 @@ def _active_dataset_or_404() -> pd.DataFrame:
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Tidak ada dataset aktif: {e}")
+        raise HTTPException(status_code=404, detail=f"No active dataset: {e}")
 
 
 @app.get("/api/interpretation")
@@ -1238,7 +1175,7 @@ async def api_interpretation() -> Dict[str, Any]:
     try:
         df = _active_dataset_or_404()
         result = build_interpretation(df)
-        return {"status": "success", "result": sanitize_obj(result)}
+        return clean_json_payload({"status": "success", "result": result})
     except HTTPException:
         raise
     except Exception as e:
@@ -1250,7 +1187,7 @@ async def api_reports() -> Dict[str, Any]:
     try:
         df = _active_dataset_or_404()
         report = build_full_report(df)
-        return {"status": "success", "result": sanitize_obj(report)}
+        return clean_json_payload({"status": "success", "result": report})
     except HTTPException:
         raise
     except Exception as e:
@@ -1267,11 +1204,8 @@ async def download_csv() -> StreamingResponse:
                 meta = json.load(f)
         base_name = Path(meta.get("fileName", "dataset")).stem
         content = dataframe_to_csv_bytes(df)
-        return StreamingResponse(
-            iter([content]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{base_name}_export.csv"'},
-        )
+        return StreamingResponse(iter([content]), media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_export.csv"'})
     except HTTPException:
         raise
     except Exception as e:
@@ -1289,11 +1223,9 @@ async def download_xlsx() -> StreamingResponse:
         base_name = Path(meta.get("fileName", "dataset")).stem
         numeric_stats, categorical_stats = build_stats_bundle(df)
         content = dataframe_to_xlsx_bytes(df, numeric_stats, categorical_stats)
-        return StreamingResponse(
-            iter([content]),
+        return StreamingResponse(iter([content]),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.xlsx"'},
-        )
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.xlsx"'})
     except HTTPException:
         raise
     except Exception as e:
@@ -1311,115 +1243,30 @@ async def download_pdf() -> StreamingResponse:
         base_name = Path(meta.get("fileName", "dataset")).stem
         report = build_full_report(df)
         content = report_to_pdf_bytes(report)
-        return StreamingResponse(
-            iter([content]),
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.pdf"'},
-        )
+        return StreamingResponse(iter([content]), media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}_report.pdf"'})
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 
-@app.post("/api/insights/recommend-chart")
-async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]:
-    try:
-        df = _load_active_dataset_df()
-        col = payload.column_name
-        if col not in df.columns:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Kolom '{col}' tidak ditemukan dalam dataset aktif.",
-            )
-        dtype_str = str(df[col].dtype)
-        if dtype_str in ("int64", "float64"):
-            data_type = "numerical"
-        elif dtype_str in ("object", "string"):
-            data_type = "categorical"
-        elif "datetime" in dtype_str:
-            data_type = "datetime"
-        else:
-            data_type = dtype_str
-        unique_count = int(df[col].nunique())
-        sample_values = sanitize_obj(df[col].dropna().head(5).tolist())
-        recommendation = get_chart_recommendation(
-            column_name=col,
-            data_type=data_type,
-            unique_count=unique_count,
-            sample_values=sample_values,
-        )
-        return {
-            "status": "success",
-            "column_name": col,
-            "data_type": data_type,
-            "unique_count": unique_count,
-            "sample_values": sample_values,
-            "recommendation": recommendation,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {e}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ███  ANTIGRAVITY STANDARDIZATION ENGINE  ·  v4
-#      POST /api/data/analyze  (upload + persist + EDA + health metrics)
-#      GET  /api/data/analyze  (auto-fetch from persisted pkl)
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ── JSON-safety helpers ───────────────────────────────────────────────────────
-
-def _safe(v: Any) -> Any:
-    """
-    Cast any NumPy scalar to a native Python type.
-    Map NaN, NaT, and Inf to Python None (→ JSON null).
-    """
-    if isinstance(v, np.integer):
-        return int(v)
-    if isinstance(v, np.floating):
-        f = float(v)
-        return None if (math.isnan(f) or math.isinf(f)) else f
-    if isinstance(v, np.bool_):
-        return bool(v)
-    if isinstance(v, float):
-        return None if (math.isnan(v) or math.isinf(v)) else v
-    if v is np.nan:
-        return None
-    # pandas NaT, Timestamp, etc.
-    try:
-        if pd.isnull(v):
-            return None
-    except (TypeError, ValueError):
-        pass
-    return v
-
-
-def _sanitize_preview_records(records: List[Dict]) -> List[Dict]:
-    """Ensure every cell in the preview sample is JSON-serialisable."""
-    clean: List[Dict] = []
-    for row in records:
-        clean_row: Dict[str, Any] = {}
-        for k, v in row.items():
-            clean_row[str(k)] = v if isinstance(v, str) else _safe(v)
-        clean.append(clean_row)
-    return clean
 
 
 # ── Notebook EDA Core ─────────────────────────────────────────────────────────
 
-def _compute_summary_stats(df: pd.DataFrame) -> Dict[str, Any]:
-    """
-    Descriptive statistics for every numeric column.
-    Mirrors DescriptiveStatistics.ipynb exactly.
+def _compute_dataset_meta(df: pd.DataFrame) -> Dict[str, Any]:
+    """Notebook-level data integrity checks. Returns 4 key health metrics."""
+    return {
+        "total_rows": int(len(df)),
+        "total_columns": int(len(df.columns)),
+        "total_duplicated_rows": int(df.duplicated().sum()),
+        "total_missing_cells": int(df.isna().sum().sum()),
+    }
 
-    Fields per column:
-      count, missing, missing_percentage, mean, median, mode,
-      std, variance, min, max, q1, q3, iqr, skewness, kurtosis,
-      distribution ("Normal" if |skewness| ≤ 0.5 else "Not Normal"),
-      n_outliers (IQR-fence method).
-    """
+
+def _compute_summary_stats(df: pd.DataFrame) -> Dict[str, Any]:
+    """Descriptive statistics for every numeric column."""
     result: Dict[str, Any] = {}
     for col in df.select_dtypes(include=["number"]).columns:
         series = df[col]
@@ -1430,21 +1277,18 @@ def _compute_summary_stats(df: pd.DataFrame) -> Dict[str, Any]:
 
         if n == 0:
             result[str(col)] = {
-                "count": 0,
-                "missing": missing_count,
+                "count": 0, "missing": missing_count,
                 "missing_percentage": _safe(missing_count / total * 100 if total else 0),
                 "mean": None, "median": None, "mode": None,
                 "std": None, "variance": None, "min": None, "max": None,
                 "q1": None, "q3": None, "iqr": None,
-                "skewness": None, "kurtosis": None,
-                "distribution": None, "n_outliers": None,
+                "skewness": None, "kurtosis": None, "distribution": None, "n_outliers": None,
             }
             continue
 
         q1 = _safe(valid.quantile(0.25))
         q3 = _safe(valid.quantile(0.75))
         iqr_val = (q3 - q1) if (q1 is not None and q3 is not None) else None
-
         skewness_val = _safe(valid.skew())
         kurtosis_val = _safe(valid.kurt())
 
@@ -1464,23 +1308,14 @@ def _compute_summary_stats(df: pd.DataFrame) -> Dict[str, Any]:
         mode_val = _safe(mode_series.iloc[0]) if len(mode_series) > 0 else None
 
         result[str(col)] = {
-            "count": n,
-            "missing": missing_count,
+            "count": n, "missing": missing_count,
             "missing_percentage": _safe(missing_count / total * 100 if total else 0),
-            "mean": _safe(valid.mean()),
-            "median": _safe(valid.median()),
-            "mode": mode_val,
-            "std": _safe(valid.std()),
-            "variance": _safe(valid.var()),
-            "min": _safe(valid.min()),
-            "max": _safe(valid.max()),
-            "q1": q1,
-            "q3": q3,
-            "iqr": _safe(iqr_val),
-            "skewness": skewness_val,
-            "kurtosis": kurtosis_val,
-            "distribution": distribution,
-            "n_outliers": n_outliers,
+            "mean": _safe(valid.mean()), "median": _safe(valid.median()), "mode": mode_val,
+            "std": _safe(valid.std()), "variance": _safe(valid.var()),
+            "min": _safe(valid.min()), "max": _safe(valid.max()),
+            "q1": q1, "q3": q3, "iqr": _safe(iqr_val),
+            "skewness": skewness_val, "kurtosis": kurtosis_val,
+            "distribution": distribution, "n_outliers": n_outliers,
         }
     return result
 
@@ -1490,13 +1325,7 @@ def _compute_pearson_matrix(df: pd.DataFrame) -> Dict[str, Any]:
     numeric_df = df.select_dtypes(include=["number"])
     corr = numeric_df.corr(method="pearson")
     cols = [str(c) for c in corr.columns.tolist()]
-    matrix = {
-        str(row_col): {
-            str(col_col): _safe(corr.loc[row_col, col_col])
-            for col_col in corr.columns
-        }
-        for row_col in corr.columns
-    }
+    matrix = {str(row_col): {str(col_col): _safe(corr.loc[row_col, col_col]) for col_col in corr.columns} for row_col in corr.columns}
     return {"columns": cols, "matrix": matrix}
 
 
@@ -1536,26 +1365,8 @@ def _compute_cramers_v_matrix(df: pd.DataFrame) -> Dict[str, Any]:
     return {"columns": cat_cols, "matrix": matrix}
 
 
-# ── Notebook Health Metrics & EDA Runner ──────────────────────────────────────
-
-def _compute_dataset_meta(df: pd.DataFrame) -> Dict[str, Any]:
-    """
-    Notebook-level data integrity checks.
-    Returns 4 key health metrics for the dataset diagnostics panel.
-    """
-    return {
-        "total_rows": int(len(df)),
-        "total_columns": int(len(df.columns)),
-        "total_duplicated_rows": int(df.duplicated().sum()),
-        "total_missing_cells": int(df.isna().sum().sum()),
-    }
-
-
 def _run_eda(df: pd.DataFrame) -> Dict[str, Any]:
-    """
-    Orchestrates the analytical pipeline (no AI engine).
-    Returns the full payload dict (without data_preview — that is added by callers).
-    """
+    """Orchestrates the analytical pipeline (no AI engine)."""
     dataset_meta = _compute_dataset_meta(df)
     summary_stats = _compute_summary_stats(df)
     pearson_matrix = _compute_pearson_matrix(df)
@@ -1564,8 +1375,7 @@ def _run_eda(df: pd.DataFrame) -> Dict[str, Any]:
     return {
         "dataset_meta": dataset_meta,
         "metadata": {
-            "rows": dataset_meta["total_rows"],
-            "columns": dataset_meta["total_columns"],
+            "rows": dataset_meta["total_rows"], "columns": dataset_meta["total_columns"],
             "column_names": [str(c) for c in df.columns.tolist()],
         },
         "summary_stats": summary_stats,
@@ -1574,10 +1384,10 @@ def _run_eda(df: pd.DataFrame) -> Dict[str, Any]:
     }
 
 
-# ── File-parsing helper (supports CSV, TXT, Excel, JSON) ─────────────────────
+# ── File-parsing helper ───────────────────────────────────────────────────────
 
 def _parse_uploaded_bytes(raw_bytes: bytes, filename: str) -> pd.DataFrame:
-    """Parse raw file bytes into a Pandas DataFrame. Raises HTTPException on failure."""
+    """Parse raw file bytes into a Pandas DataFrame."""
     bio = io.BytesIO(raw_bytes)
     lower = filename.lower()
     df: Optional[pd.DataFrame] = None
@@ -1609,11 +1419,7 @@ def _parse_uploaded_bytes(raw_bytes: bytes, filename: str) -> pd.DataFrame:
         try:
             bio.seek(0)
             payload_json = json.loads(bio.read().decode("utf-8-sig"))
-            df = (
-                pd.DataFrame(payload_json)
-                if isinstance(payload_json, list)
-                else pd.DataFrame([payload_json])
-            )
+            df = pd.DataFrame(payload_json) if isinstance(payload_json, list) else pd.DataFrame([payload_json])
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"Cannot parse JSON file: {exc}")
     else:
@@ -1622,7 +1428,6 @@ def _parse_uploaded_bytes(raw_bytes: bytes, filename: str) -> pd.DataFrame:
 
     if df is None or df.empty:
         raise HTTPException(status_code=400, detail="Dataset is empty after parsing.")
-
     return df
 
 
@@ -1630,11 +1435,7 @@ def _parse_uploaded_bytes(raw_bytes: bytes, filename: str) -> pd.DataFrame:
 
 @app.post("/api/data/analyze")
 async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """
-    Upload a file → parse raw DataFrame (DO NOT drop rows) →
-    immediately save to data_raw.pkl → run EDA + health metrics →
-    return combined payload with random 10-row sample as data_preview.
-    """
+    """Upload a file → parse raw DataFrame → save to data_raw.pkl → run EDA + health metrics."""
     filename = file.filename or ""
     if not filename.strip():
         raise HTTPException(status_code=400, detail="No file name provided.")
@@ -1647,27 +1448,21 @@ async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
         if not raw_bytes:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-        # ── 1. Parse to raw DataFrame — zero rows dropped ─────────────────────
         df_raw = _parse_uploaded_bytes(raw_bytes, filename)
-
-        # ── 2. Persist to disk immediately ────────────────────────────────────
         df_raw.to_pickle(_ENGINE_PKL)
 
-        # ── Remove stale cleaned dataset so the app reflects the new upload ──
         if _CLEAN_PKL.exists():
             _CLEAN_PKL.unlink()
 
-        # ── 3. EDA + Notebook Health Metrics ──────────────────────────────────
         payload = _run_eda(df_raw)
         payload["status"] = "success"
         payload["metadata"]["fileName"] = filename
 
-        # ── 4. Data preview: random sample of max 10 rows from raw DataFrame ─
         sample_n = min(10, len(df_raw))
         preview_records = df_raw.sample(n=sample_n, random_state=42).to_dict(orient="records")
         payload["data_preview"] = _sanitize_preview_records(preview_records)
 
-        return payload
+        return clean_json_payload(payload)
 
     except HTTPException:
         raise
@@ -1681,17 +1476,14 @@ async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
 async def analyze_data_get() -> Dict[str, Any]:
     """
     Cross-page auto-fetch endpoint.
-    • data_raw.pkl missing  → {"status": "no_data"}
-    • data_clean.pkl present → load cleaned df (latest cleaning state).
-    • data_clean.pkl absent  → fallback to data_raw.pkl.
+    Used by data-cleaning page to fetch diagnostics on mount.
+    Returns: {"status": "success", "dataset_meta": {"total_rows": int, "total_columns": int, "total_duplicated_rows": int, "total_missing_cells": int}}
     """
     if not _ENGINE_PKL.exists():
         return {"status": "no_data"}
 
     try:
-        # Prefer the cleaned dataset if it exists; fallback to raw.
         df_source = pd.read_pickle(_CLEAN_PKL) if _CLEAN_PKL.exists() else pd.read_pickle(_ENGINE_PKL)
-
         payload = _run_eda(df_source)
         payload["status"] = "success"
 
@@ -1699,7 +1491,8 @@ async def analyze_data_get() -> Dict[str, Any]:
         preview_records = df_source.sample(n=sample_n, random_state=42).to_dict(orient="records")
         payload["data_preview"] = _sanitize_preview_records(preview_records)
 
-        return payload
+        return clean_json_payload(payload)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Server error: {exc}") from exc
+

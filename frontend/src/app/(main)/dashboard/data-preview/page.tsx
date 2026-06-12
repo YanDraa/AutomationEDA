@@ -41,7 +41,7 @@ function isMissingValue(value: unknown): boolean {
 
 function EmptyState() {
   return (
-    <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
+    <div className="flex w-full flex-col items-center justify-center gap-4 overflow-hidden py-20 text-center">
       <div className="rounded-full bg-muted p-4">
         <Database className="size-8 text-muted-foreground" />
       </div>
@@ -126,7 +126,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden px-2">
+      <div className="flex w-full flex-col gap-6 overflow-hidden px-2">
         <div>
           <h1 className="font-semibold text-2xl">Data Preview</h1>
           <p className="mt-1 text-muted-foreground text-sm">
@@ -160,7 +160,7 @@ export default function Page() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-4 overflow-x-hidden px-2">
+    <div className="flex min-w-0 w-full flex-col gap-4 overflow-hidden px-2">
       {/* Header */}
       <div>
         <h1 className="font-semibold text-xl">Data Preview</h1>
@@ -252,14 +252,14 @@ export default function Page() {
               {String(dataPreview.length)} random rows · {String(totalCols)} columns · {totalRows.toLocaleString()} total rows
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
+          <CardContent className="min-w-0 p-0">
+            <div className="w-full overflow-x-hidden">
+              <Table className="w-full table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card">#</TableHead>
+                    <TableHead className="sticky left-0 bg-card w-10">#</TableHead>
                     {previewColumns.map((col) => (
-                      <TableHead key={col} className="whitespace-nowrap">
+                      <TableHead key={col} className="truncate whitespace-nowrap">
                         {col}
                       </TableHead>
                     ))}
@@ -268,13 +268,13 @@ export default function Page() {
                 <TableBody>
                   {dataPreview.map((row, rowIdx) => (
                     <TableRow key={rowIdx}>
-                      <TableCell className="sticky left-0 bg-card font-medium text-sm text-muted-foreground">
+                      <TableCell className="sticky left-0 bg-card w-10 font-medium text-sm text-muted-foreground">
                         {rowIdx + 1}
                       </TableCell>
                       {previewColumns.map((col) => {
                         const cellValue = row[col];
                         return (
-                          <TableCell key={col} className="text-sm">
+                          <TableCell key={col} className="truncate text-sm" title={String(cellValue)}>
                             {isMissingValue(cellValue) ? (
                               <Badge
                                 variant="outline"
@@ -283,9 +283,7 @@ export default function Page() {
                                 NaN
                               </Badge>
                             ) : (
-                              <span className="block truncate max-w-[150px]" title={String(cellValue)}>
-                                {String(cellValue)}
-                              </span>
+                              String(cellValue)
                             )}
                           </TableCell>
                         );

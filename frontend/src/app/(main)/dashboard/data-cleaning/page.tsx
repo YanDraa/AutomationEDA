@@ -33,7 +33,7 @@ import { Spinner } from "@/components/ui/spinner";
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const API_BASE = "http://localhost:8000";
-const NOTIFICATION_DURATION = 10_000;
+const NOTIFICATION_DURATION = 3_000;
 
 type CleanAction =
   | "drop_duplicates"

@@ -46,7 +46,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             font={font}
           >
             {children}
-            <Toaster />
+            <Toaster position="bottom-right" />
           </PreferencesStoreProvider>
         </TooltipProvider>
       </body>

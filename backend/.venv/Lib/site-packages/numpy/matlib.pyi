@@ -2,9 +2,7 @@ from typing import Any, Literal, TypeAlias, TypeVar, overload
 
 import numpy as np
 import numpy.typing as npt
-
-# ruff: noqa: F401
-from numpy import (
+from numpy import (  # noqa: F401
     False_,
     ScalarType,
     True_,
@@ -70,6 +68,7 @@ from numpy import (
     bitwise_invert,
     bitwise_left_shift,
     bitwise_not,
+    bitwise_or,
     bitwise_right_shift,
     bitwise_xor,
     blackman,
@@ -89,6 +88,7 @@ from numpy import (
     c_,
     can_cast,
     cbrt,
+    cdouble,
     ceil,
     char,
     character,
@@ -99,6 +99,7 @@ from numpy import (
     common_type,
     complex64,
     complex128,
+    complex192,
     complex256,
     complexfloating,
     compress,
@@ -160,6 +161,7 @@ from numpy import (
     expand_dims,
     expm1,
     extract,
+    f2py,
     fabs,
     fft,
     fill_diagonal,
@@ -174,6 +176,7 @@ from numpy import (
     float16,
     float32,
     float64,
+    float96,
     float128,
     float_power,
     floating,
@@ -209,6 +212,7 @@ from numpy import (
     greater_equal,
     half,
     hamming,
+    hanning,
     heaviside,
     histogram,
     histogram2d,
@@ -394,7 +398,7 @@ from numpy import (
     roots,
     rot90,
     round,
-    # row_stack,
+    row_stack,
     s_,
     save,
     savetxt,
@@ -425,9 +429,11 @@ from numpy import (
     sort,
     sort_complex,
     spacing,
+    split,
     sqrt,
     square,
     squeeze,
+    stack,
     std,
     str_,
     strings,
@@ -446,7 +452,6 @@ from numpy import (
     trace,
     transpose,
     trapezoid,
-    trapz,
     tri,
     tril,
     tril_indices,
@@ -459,6 +464,7 @@ from numpy import (
     trunc,
     typecodes,
     typename,
+    typing,
     ubyte,
     ufunc,
     uint,
@@ -501,19 +507,17 @@ __all__ += np.__all__
 
 ###
 
-_T = TypeVar("_T", bound=np.generic)
-_Matrix: TypeAlias = np.matrix[tuple[int, int], np.dtype[_T]]
+_ScalarT = TypeVar("_ScalarT", bound=np.generic)
+_Matrix: TypeAlias = np.matrix[tuple[int, int], np.dtype[_ScalarT]]
 _Order: TypeAlias = Literal["C", "F"]
 
 ###
-
-# ruff: noqa: F811
 
 #
 @overload
 def empty(shape: int | tuple[int, int], dtype: None = None, order: _Order = "C") -> _Matrix[np.float64]: ...
 @overload
-def empty(shape: int | tuple[int, int], dtype: _DTypeLike[_T], order: _Order = "C") -> _Matrix[_T]: ...
+def empty(shape: int | tuple[int, int], dtype: _DTypeLike[_ScalarT], order: _Order = "C") -> _Matrix[_ScalarT]: ...
 @overload
 def empty(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C") -> _Matrix[Any]: ...
 
@@ -521,7 +525,7 @@ def empty(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C
 @overload
 def ones(shape: int | tuple[int, int], dtype: None = None, order: _Order = "C") -> _Matrix[np.float64]: ...
 @overload
-def ones(shape: int | tuple[int, int], dtype: _DTypeLike[_T], order: _Order = "C") -> _Matrix[_T]: ...
+def ones(shape: int | tuple[int, int], dtype: _DTypeLike[_ScalarT], order: _Order = "C") -> _Matrix[_ScalarT]: ...
 @overload
 def ones(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C") -> _Matrix[Any]: ...
 
@@ -529,7 +533,7 @@ def ones(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C"
 @overload
 def zeros(shape: int | tuple[int, int], dtype: None = None, order: _Order = "C") -> _Matrix[np.float64]: ...
 @overload
-def zeros(shape: int | tuple[int, int], dtype: _DTypeLike[_T], order: _Order = "C") -> _Matrix[_T]: ...
+def zeros(shape: int | tuple[int, int], dtype: _DTypeLike[_ScalarT], order: _Order = "C") -> _Matrix[_ScalarT]: ...
 @overload
 def zeros(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C") -> _Matrix[Any]: ...
 
@@ -537,7 +541,7 @@ def zeros(shape: int | tuple[int, int], dtype: npt.DTypeLike, order: _Order = "C
 @overload
 def identity(n: int, dtype: None = None) -> _Matrix[np.float64]: ...
 @overload
-def identity(n: int, dtype: _DTypeLike[_T]) -> _Matrix[_T]: ...
+def identity(n: int, dtype: _DTypeLike[_ScalarT]) -> _Matrix[_ScalarT]: ...
 @overload
 def identity(n: int, dtype: npt.DTypeLike | None = None) -> _Matrix[Any]: ...
 
@@ -551,11 +555,11 @@ def eye(
     order: _Order = "C",
 ) -> _Matrix[np.float64]: ...
 @overload
-def eye(n: int, M: int | None, k: int, dtype: _DTypeLike[_T], order: _Order = "C") -> _Matrix[_T]: ...
+def eye(n: int, M: int | None, k: int, dtype: _DTypeLike[_ScalarT], order: _Order = "C") -> _Matrix[_ScalarT]: ...
 @overload
-def eye(n: int, M: int | None = None, k: int = 0, *, dtype: _DTypeLike[_T], order: _Order = "C") -> _Matrix[_T]: ...
+def eye(n: int, M: int | None = None, k: int = 0, *, dtype: _DTypeLike[_ScalarT], order: _Order = "C") -> _Matrix[_ScalarT]: ...
 @overload
-def eye(n: int, M: int | None = None, k: int = 0, dtype: npt.DTypeLike = ..., order: _Order = "C") -> _Matrix[Any]: ...
+def eye(n: int, M: int | None = None, k: int = 0, dtype: npt.DTypeLike | None = ..., order: _Order = "C") -> _Matrix[Any]: ...
 
 #
 @overload
@@ -571,8 +575,8 @@ def randn(arg: int, /, *args: int) -> _Matrix[np.float64]: ...
 
 #
 @overload
-def repmat(a: _Matrix[_T], m: int, n: int) -> _Matrix[_T]: ...
+def repmat(a: _Matrix[_ScalarT], m: int, n: int) -> _Matrix[_ScalarT]: ...
 @overload
-def repmat(a: _ArrayLike[_T], m: int, n: int) -> npt.NDArray[_T]: ...
+def repmat(a: _ArrayLike[_ScalarT], m: int, n: int) -> npt.NDArray[_ScalarT]: ...
 @overload
 def repmat(a: npt.ArrayLike, m: int, n: int) -> npt.NDArray[Any]: ...
