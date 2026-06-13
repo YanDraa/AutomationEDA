@@ -77,6 +77,7 @@ function DatasetInformationCard() {
 
 function LogoutButton() {
   const router = useRouter();
+  const { clearDataset } = useDataset();
 
   const handleLogout = async () => {
     try {
@@ -87,6 +88,7 @@ function LogoutButton() {
     } catch {
       // Even if backend call fails, clear the cookie client-side
     }
+    clearDataset();
     router.push("/landing");
   };
 

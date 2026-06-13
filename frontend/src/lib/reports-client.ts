@@ -57,6 +57,7 @@ export async function fetchInterpretation(): Promise<InterpretationResult> {
   const res = await fetch(`${BACKEND_URL}/api/interpretation`, {
     method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -71,6 +72,7 @@ export async function fetchReport(): Promise<ReportResult> {
   const res = await fetch(`${BACKEND_URL}/api/reports`, {
     method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -87,6 +89,7 @@ export async function downloadExport(
 ): Promise<void> {
   const res = await fetch(`${BACKEND_URL}/api/download/${format}`, {
     method: "GET",
+    credentials: "include",
   });
 
   if (!res.ok) {

@@ -167,7 +167,7 @@ export default function Page() {
 
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/data/cleaning-summary`, { method: "GET" });
+      const res = await fetch(`${API_BASE}/api/data/cleaning-summary`, { method: "GET", credentials: "include" });
       if (!res.ok) { setHasData(false); return; }
       const json = await res.json();
       if (json.status === "no_data") { router.replace("/dashboard/upload-data"); return; }
@@ -192,7 +192,7 @@ export default function Page() {
   const executeBulkAction = useCallback(async (action: BulkAction) => {
     setExecuting(action);
     try {
-      const res = await fetch(`${API_BASE}/api/data/execute-cleaning`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+      const res = await fetch(`${API_BASE}/api/data/execute-cleaning`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action }) });
       const json = await res.json();
       if (json.status === "success") {
         setTotalRows((json.total_rows as number) ?? 0); setTotalCols((json.total_columns as number) ?? 0);
@@ -205,7 +205,7 @@ export default function Page() {
   const executeGranularAction = useCallback(async (action: MissingAction | "standardize_text") => {
     setExecuting(action);
     try {
-      const res = await fetch(`${API_BASE}/api/data/clean`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+      const res = await fetch(`${API_BASE}/api/data/clean`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action }) });
       const json = await res.json();
       if (json.status === "success") {
         const meta = json.dataset_meta ?? {};

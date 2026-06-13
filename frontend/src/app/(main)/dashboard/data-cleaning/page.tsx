@@ -206,7 +206,7 @@ export default function Page() {
 
   const fetchMeta = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/data/analyze`, { method: "GET" });
+      const res = await fetch(`${API_BASE}/api/data/analyze`, { method: "GET", credentials: "include" });
       if (!res.ok) {
         setHasData(false);
         return;
@@ -248,6 +248,7 @@ export default function Page() {
         const res = await fetch(`${API_BASE}/api/data/clean`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ action }),
         });
         const json = await res.json();

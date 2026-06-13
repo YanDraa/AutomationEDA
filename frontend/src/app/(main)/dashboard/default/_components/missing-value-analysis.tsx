@@ -18,7 +18,7 @@ export function MissingValueAnalysis() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("http://127.0.0.1:8000/api/current-dataset")
+    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});
@@ -93,10 +93,10 @@ export function MissingValueAnalysis() {
                   border: "1px solid hsl(var(--border))",
                   backgroundColor: "hsl(var(--popover))",
                 }}
-                formatter={(value: number, _: string, props) => [
-                  `${value} nilai (${props.payload?.pct ?? 0}%)`,
-                  "Missing",
-                ]}
+                formatter={(value, _, props) => {
+                  const pct = (props as unknown as { payload?: { pct?: number } })?.payload?.pct ?? 0;
+                  return [`${Number(value)} nilai (${pct}%)`, "Missing"];
+                }}
               />
               <Bar dataKey="missing" radius={[0, 4, 4, 0]} maxBarSize={16}>
                 {chartData.map((entry, i) => (

@@ -86,6 +86,7 @@ export default function Page() {
         const res = await fetch(`${API_BASE}/api/data/analyze`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
 
         if (!res.ok) {

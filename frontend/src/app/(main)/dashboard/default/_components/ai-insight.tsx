@@ -49,7 +49,7 @@ export function AiInsight() {
     if (!dataset) return;
     setLoading(true);
     setError(null);
-    fetch("http://127.0.0.1:8000/api/interpretation")
+    fetch("http://localhost:8000/api/interpretation", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => {
         if (d.status === "success" && d.result) setResult(d.result);

@@ -27,7 +27,7 @@ export function DatasetComposition() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("http://127.0.0.1:8000/api/current-dataset")
+    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});
@@ -87,9 +87,9 @@ export function DatasetComposition() {
                     backgroundColor: "hsl(var(--popover))",
                     color: "hsl(var(--popover-foreground))",
                   }}
-                  formatter={(value: number, name: string) => [
-                    `${value} kolom (${((value / total) * 100).toFixed(0)}%)`,
-                    name,
+                  formatter={(value, name) => [
+                    `${Number(value)} kolom (${((Number(value) / total) * 100).toFixed(0)}%)`,
+                    String(name),
                   ]}
                 />
               </PieChart>

@@ -1,4 +1,4 @@
-export const BACKEND_URL = "http://127.0.0.1:8000";
+export const BACKEND_URL = "http://localhost:8000";
 
 export type HighchartsOptions = Record<string, unknown>;
 
@@ -12,6 +12,7 @@ export async function fetchDatasetColumns(): Promise<DatasetColumnsPayload> {
   const res = await fetch(`${BACKEND_URL}/api/current-dataset`, {
     method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -43,6 +44,7 @@ export async function postVisualizationOptions(
   const res = await fetch(`${BACKEND_URL}${endpoint}`, {
     method: "POST",
     body: form,
+    credentials: "include",
   });
 
   if (!res.ok) {

@@ -17,20 +17,57 @@ CLEAN_DIR = DATA_DIR / "clean"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 CLEAN_DIR.mkdir(parents=True, exist_ok=True)
 
+# ── User-scoped data storage ────────────────────────────────────────────────────
+
+USERS_DATA_DIR = DATA_DIR / "users"
+USERS_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Legacy shared paths (kept for migration only)
 RAW_DATASET_PKL = RAW_DIR / "data_raw.pkl"
 CLEAN_DATASET_PKL = CLEAN_DIR / "data_clean.pkl"
-
 ACTIVE_DATASET_PKL = RAW_DIR / "active_dataset.pkl"
 ACTIVE_DATASET_META_JSON = RAW_DIR / "active_dataset_meta.json"
-
-# Legacy path before clean/ folder existed.
 _LEGACY_CLEAN_DATASET_PKL = RAW_DIR / "data_clean.pkl"
 
 
-def migrate_legacy_clean_dataset() -> None:
-    """Move data_clean.pkl from data/raw/ to data/clean/ if needed."""
-    if _LEGACY_CLEAN_DATASET_PKL.exists() and not CLEAN_DATASET_PKL.exists():
-        _LEGACY_CLEAN_DATASET_PKL.replace(CLEAN_DATASET_PKL)
+def get_user_data_dir(user_id: str) -> Path:
+    """Return user-specific data directory, creating it if needed."""
+    user_dir = USERS_DATA_DIR / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir
+
+
+def get_user_paths(user_id: str) -> dict[str, Path]:
+    """Return all persistence paths for a specific user."""
+    user_dir = get_user_data_dir(user_id)
+    return {
+        "raw_pkl": user_dir / "data_raw.pkl",
+        "clean_pkl": user_dir / "data_clean.pkl",
+        "active_pkl": user_dir / "active_dataset.pkl",
+        "active_meta": user_dir / "active_dataset_meta.json",
+    }
+
+
+def migrate_legacy_data_to_users() -> None:
+    """Migrate old shared data files to user-scoped storage (user_id='1')."""
+    if not RAW_DATASET_PKL.exists() and not CLEAN_DATASET_PKL.exists() and not ACTIVE_DATASET_PKL.exists():
+        return  # nothing to migrate
+
+    default_user_dir = get_user_data_dir("1")
+
+    if RAW_DATASET_PKL.exists() and not (default_user_dir / "data_raw.pkl").exists():
+        RAW_DATASET_PKL.replace(default_user_dir / "data_raw.pkl")
+
+    if _LEGACY_CLEAN_DATASET_PKL.exists() and not (default_user_dir / "data_clean.pkl").exists():
+        _LEGACY_CLEAN_DATASET_PKL.replace(default_user_dir / "data_clean.pkl")
+    elif CLEAN_DATASET_PKL.exists() and not (default_user_dir / "data_clean.pkl").exists():
+        CLEAN_DATASET_PKL.replace(default_user_dir / "data_clean.pkl")
+
+    if ACTIVE_DATASET_PKL.exists() and not (default_user_dir / "active_dataset.pkl").exists():
+        ACTIVE_DATASET_PKL.replace(default_user_dir / "active_dataset.pkl")
+
+    if ACTIVE_DATASET_META_JSON.exists() and not (default_user_dir / "active_dataset_meta.json").exists():
+        ACTIVE_DATASET_META_JSON.replace(default_user_dir / "active_dataset_meta.json")
 
 SUPPORTED_UPLOAD_EXTENSIONS = (".csv", ".xlsx", ".xls", ".txt", ".json")
 _CSV_ENCODINGS = ("utf-8-sig", "utf-8", "latin-1", "cp1252")
@@ -216,19 +253,22 @@ def read_dataframe_and_raw(file: UploadFile) -> tuple[pd.DataFrame, bytes]:
     return df, raw
 
 
-def _load_active_dataset_df() -> pd.DataFrame:
-    cleanup_orphaned_dataset_metadata()
-    if not ACTIVE_DATASET_PKL.exists():
+def _load_active_dataset_df(user_id: str) -> pd.DataFrame:
+    paths = get_user_paths(user_id)
+    # Cleanup orphaned metadata for this user
+    if not paths["active_pkl"].exists() and paths["active_meta"].exists():
+        paths["active_meta"].unlink(missing_ok=True)
+
+    if not paths["active_pkl"].exists():
         raise HTTPException(
             status_code=400,
             detail="No active dataset on server. Please upload data first via /api/upload.",
         )
     try:
-        return pd.read_pickle(ACTIVE_DATASET_PKL)
+        return pd.read_pickle(paths["active_pkl"])
     except Exception as exc:
-        cleanup_orphaned_dataset_metadata()
-        if ACTIVE_DATASET_PKL.exists():
-            ACTIVE_DATASET_PKL.unlink(missing_ok=True)
+        if paths["active_pkl"].exists():
+            paths["active_pkl"].unlink(missing_ok=True)
         raise HTTPException(
             status_code=400,
             detail=f"Active dataset is corrupted. Please upload your file again. ({exc})",
@@ -237,11 +277,13 @@ def _load_active_dataset_df() -> pd.DataFrame:
 
 def persist_metadata(
     *,
+    user_id: str,
     file_name: str,
     df: pd.DataFrame,
     raw_size_bytes: int,
     original_filename: str | None = None,
 ) -> None:
+    paths = get_user_paths(user_id)
     payload = {
         "fileName": file_name,
         "originalFilename": original_filename or file_name,
@@ -250,7 +292,7 @@ def persist_metadata(
         "fileSize": _format_file_size(int(raw_size_bytes)),
         "uploadedAt": datetime.now(timezone.utc).isoformat(),
     }
-    with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
+    with paths["active_meta"].open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
 

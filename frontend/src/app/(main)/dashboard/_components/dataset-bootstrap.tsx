@@ -6,7 +6,7 @@ import { useDataset } from "@/context/dataset-context";
 import { fetchCurrentDataset } from "@/lib/dataset-client";
 
 export function DatasetBootstrapper() {
-  const { setDataset } = useDataset();
+  const { setDataset, clearDataset } = useDataset();
 
   useEffect(() => {
     let cancelled = false;
@@ -15,7 +15,11 @@ export function DatasetBootstrapper() {
       try {
         const current = await fetchCurrentDataset();
         if (cancelled) return;
-        if (!current?.dataset) return;
+        if (!current?.dataset) {
+          // New user has no data — clear any stale state from previous session
+          clearDataset();
+          return;
+        }
 
         // Backend payload belum selalu menyediakan uploadTime/fileSize sesuai shape,
         // jadi kita fall back supaya UI tetap menarik dan tidak menimbulkan error.
@@ -34,7 +38,7 @@ export function DatasetBootstrapper() {
     return () => {
       cancelled = true;
     };
-  }, [setDataset]);
+  }, [setDataset, clearDataset]);
 
   return null;
 }

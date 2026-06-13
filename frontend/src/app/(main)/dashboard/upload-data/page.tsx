@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   CheckCircle2,
@@ -23,10 +24,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  type DatasetInfo,
-  simulateDatasetFromFile,
   useDataset,
 } from "@/context/dataset-context";
+import {
+  type HistoryEntry,
+  UploadHistory,
+} from "./upload-history";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -72,8 +75,30 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [successFile, setSuccessFile] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<string | null>(null);
+  const [uploadHistory, setUploadHistory] = useState<HistoryEntry[]>([]);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const accepted = useMemo(() => ACCEPTED_EXTENSIONS.join(","), []);
+
+  // ── Fetch upload history on mount ──────────────────────────────────────────
+
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/data/history`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          // Show newest first
+          setUploadHistory([...data.history].reverse());
+        }
+      } catch {
+        // Non-critical
+      }
+    }
+    fetchHistory();
+  }, []);
 
   // ── Upload handler: POST to /api/data/analyze → redirect on success ──────────
 
@@ -103,6 +128,7 @@ export default function Page() {
         const res = await fetch(`${API_BASE}/api/data/analyze`, {
           method: "POST",
           body: formData,
+          credentials: "include",
         });
 
         if (!res.ok) {
@@ -116,13 +142,27 @@ export default function Page() {
         const json = await res.json();
 
         if (json.status === "success") {
-          // 2. Update the dataset context for sidebar / other pages
-          try {
-            const datasetResult: DatasetInfo = await simulateDatasetFromFile(file);
-            setDataset(datasetResult);
-          } catch {
-            // Non-critical — sidebar may not update, but redirect still proceeds
-          }
+          // 2. Update the dataset context from the analyze response
+          const meta = json.metadata as {
+            fileName?: string;
+            rows?: number;
+            columns?: number;
+            fileSize?: string;
+          };
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, "0");
+          const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const month = monthNames[now.getMonth()];
+          const year = now.getFullYear();
+          const hours = String(now.getHours()).padStart(2, "0");
+          const minutes = String(now.getMinutes()).padStart(2, "0");
+          setDataset({
+            fileName: meta?.fileName ?? file.name,
+            rows: Number(meta?.rows ?? 0),
+            columns: Number(meta?.columns ?? 0),
+            fileSize: meta?.fileSize ?? "-",
+            uploadTime: `${day} ${month} ${year} ${hours}:${minutes}`,
+          });
 
           setSuccessFile(file.name);
           setFileSize(formatFileSize(file.size));
@@ -141,6 +181,34 @@ export default function Page() {
       }
     },
     [setDataset, router],
+  );
+
+  // ── Restore handler ────────────────────────────────────────────────────────
+
+  const handleRestore = useCallback(
+    async (fileName: string) => {
+      setIsRestoring(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/data/restore`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ fileName }),
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          toast.success(`Restored "${fileName}" successfully`);
+          router.refresh();
+        } else {
+          toast.error(data.detail ?? "Failed to restore dataset");
+        }
+      } catch {
+        toast.error("Failed to restore dataset. Check your connection.");
+      } finally {
+        setIsRestoring(false);
+      }
+    },
+    [router],
   );
 
   // ── Drag & drop handlers ────────────────────────────────────────────────────
@@ -323,6 +391,15 @@ export default function Page() {
           </Card>
         </div>
       </div>
+
+      {/* ── Upload History ── */}
+      {uploadHistory.length > 0 && (
+        <UploadHistory
+          history={uploadHistory}
+          onRestore={handleRestore}
+          isRestoring={isRestoring}
+        />
+      )}
     </div>
   );
 }

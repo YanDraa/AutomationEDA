@@ -299,7 +299,7 @@ export default function Page() {
   useEffect(() => {
     const fetchSchema = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/data/ai-schema`);
+        const res = await fetch(`${API_BASE}/api/data/ai-schema`, { credentials: "include" });
         if (!res.ok) {
           setNotification({
             message: "Failed to connect to backend schema service. Redirecting to upload page in 10 seconds...",
@@ -402,6 +402,7 @@ export default function Page() {
         const res = await fetch(`${API_BASE}/api/data/chart-render`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             var_x: varX,
             var_y: varY || null,

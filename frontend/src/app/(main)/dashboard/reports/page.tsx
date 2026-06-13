@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import { AlertCircle, Download, FileText, RefreshCw, Upload } from "lucide-react";
-import Link from "next/link";
+import { AlertCircle, Download, RefreshCw } from "lucide-react";
 
+import { EmptyDataset } from "@/components/empty-dataset";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,21 +53,10 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
-        <div className="rounded-full bg-muted p-4">
-          <FileText className="size-8 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="font-medium">Belum ada dataset</p>
-          <p className="mt-1 text-muted-foreground text-sm">Upload file terlebih dahulu.</p>
-        </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard">
-            <Upload className="size-4" />
-            Upload Sekarang
-          </Link>
-        </Button>
-      </div>
+      <EmptyDataset
+        title="No dataset loaded"
+        description="Upload a file first to generate reports."
+      />
     );
   }
 

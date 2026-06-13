@@ -55,7 +55,7 @@ export default function Page() {
         const message =
           e instanceof Error
             ? e.message
-            : "Gagal membaca file. Pastikan backend berjalan di http://127.0.0.1:8000.";
+            : "Gagal membaca file. Pastikan backend berjalan di http://localhost:8000.";
         setError(message);
       } finally {
         setIsParsing(false);

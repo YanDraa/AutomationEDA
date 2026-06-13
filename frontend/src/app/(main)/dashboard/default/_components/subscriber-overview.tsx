@@ -67,7 +67,7 @@ export function SubscriberOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("http://127.0.0.1:8000/api/current-dataset")
+    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => setApiData(d))
       .catch(() => {});

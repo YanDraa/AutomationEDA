@@ -1,0 +1,16 @@
+[
+  {
+    "fileName": "employee_raw_dataset.csv",
+    "uploadedAt": "2026-06-13T07:20:46.393953+00:00",
+    "rows": 510,
+    "columns": 13,
+    "fileSize": 35326
+  },
+  {
+    "fileName": "02_data.xlsx",
+    "uploadedAt": "2026-06-13T07:21:05.524786+00:00",
+    "rows": 1826,
+    "columns": 6,
+    "fileSize": 61692
+  }
+]

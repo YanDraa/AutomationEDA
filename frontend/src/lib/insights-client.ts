@@ -19,6 +19,7 @@ async function postInsightForm(
   const res = await fetch(`${BACKEND_URL}${endpoint}`, {
     method: "POST",
     body: form,
+    credentials: "include",
   });
 
   if (!res.ok) {

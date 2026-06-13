@@ -84,6 +84,14 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def get_current_user_id(token: str) -> Optional[str]:
+    """Extract user_id from JWT token payload."""
+    payload = verify_token(token)
+    if not payload:
+        return None
+    return payload.get("sub")
+
+
 # ── Authentication ────────────────────────────────────────────────────────────
 
 

@@ -12,11 +12,13 @@ load_dotenv(_ENV_PATH)
 import io
 import json
 import math
+import shutil
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -50,12 +52,14 @@ from backend.utils import (
     cleanup_orphaned_dataset_metadata,
     get_categorical_columns,
     get_numeric_columns,
+    get_user_paths,
     is_supported_upload,
-    migrate_legacy_clean_dataset,
+    migrate_legacy_data_to_users,
     persist_metadata,
     read_dataframe_and_raw,
     sanitize_obj,
 )
+from backend.dependencies import require_user_id
 from backend.visualization import (
     generate_bivariate_plot,
     generate_categorical_plot,
@@ -92,8 +96,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _on_startup() -> None:
-    migrate_legacy_clean_dataset()
-    cleanup_orphaned_dataset_metadata()
+    migrate_legacy_data_to_users()
 
 
 # ─── AUTH ENDPOINTS ───────────────────────────────────────────────────────────
@@ -350,7 +353,7 @@ def _build_bivariate_summary(df: pd.DataFrame, x_col: str, y_col: str) -> Dict[s
     return summary
 
 
-def _resolve_dataframe(file: Optional[UploadFile]) -> pd.DataFrame:
+def _resolve_dataframe(file: Optional[UploadFile], user_id: str) -> pd.DataFrame:
     if file is not None and file.filename:
         filename = file.filename
         if not is_supported_upload(filename):
@@ -358,22 +361,24 @@ def _resolve_dataframe(file: Optional[UploadFile]) -> pd.DataFrame:
             raise HTTPException(status_code=400, detail=f"Unsupported file type. Use {supported}")
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
-        save_path = RAW_DIR / safe_name
+        paths = get_user_paths(user_id)
+        save_path = paths["raw_pkl"].parent / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
-        df.to_pickle(ACTIVE_DATASET_PKL)
-        persist_metadata(file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=filename)
+        df.to_pickle(paths["active_pkl"])
+        persist_metadata(user_id=user_id, file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=filename)
         return df
-    return _load_active_dataset_df()
+    return _load_active_dataset_df(user_id)
 
 
-def _load_working_dataframe() -> pd.DataFrame:
-    """Load from data_clean.pkl if available, fallback to data_raw.pkl."""
+def _load_working_dataframe(user_id: str) -> pd.DataFrame:
+    """Load from user's data_clean.pkl if available, fallback to data_raw.pkl."""
+    paths = get_user_paths(user_id)
     try:
-        if _CLEAN_PKL.exists():
-            return pd.read_pickle(_CLEAN_PKL)
-        elif _ENGINE_PKL.exists():
-            return pd.read_pickle(_ENGINE_PKL)
+        if paths["clean_pkl"].exists():
+            return pd.read_pickle(paths["clean_pkl"])
+        elif paths["raw_pkl"].exists():
+            return pd.read_pickle(paths["raw_pkl"])
         else:
             raise HTTPException(status_code=404, detail="No dataset found. Upload data first.")
     except FileNotFoundError as e:
@@ -387,17 +392,17 @@ def _load_working_dataframe() -> pd.DataFrame:
 # ─── Existing endpoints ───────────────────────────────────────────────────────
 
 @app.get("/api/current-dataset")
-async def current_dataset() -> Dict[str, Any]:
+async def current_dataset(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     empty_payload: Dict[str, Any] = {
         "status": "success", "activated": False, "dataset": None,
         "preview": None, "numeric_columns": [], "categorical_columns": [],
     }
     try:
-        cleanup_orphaned_dataset_metadata()
-        if not ACTIVE_DATASET_PKL.exists() or not ACTIVE_DATASET_META_JSON.exists():
+        paths = get_user_paths(user_id)
+        if not paths["active_pkl"].exists() or not paths["active_meta"].exists():
             return empty_payload
-        df = pd.read_pickle(ACTIVE_DATASET_PKL)
-        with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+        df = pd.read_pickle(paths["active_pkl"])
+        with paths["active_meta"].open("r", encoding="utf-8") as f:
             meta = json.load(f)
         preview_data = build_dataset_preview(df, n_head=10)
         return {
@@ -416,10 +421,11 @@ async def current_dataset() -> Dict[str, Any]:
 
 
 @app.post("/api/reset")
-async def reset_dataset() -> Dict[str, Any]:
+async def reset_dataset(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     try:
+        paths = get_user_paths(user_id)
         deleted: list[str] = []
-        for p in [ACTIVE_DATASET_PKL, ACTIVE_DATASET_META_JSON, _ENGINE_PKL, _CLEAN_PKL]:
+        for p in [paths["raw_pkl"], paths["active_pkl"], paths["active_meta"], paths["clean_pkl"]]:
             if p.exists():
                 p.unlink()
                 deleted.append(p.name)
@@ -431,7 +437,10 @@ async def reset_dataset() -> Dict[str, Any]:
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
+async def upload(
+    file: UploadFile = File(...),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     filename = file.filename or ""
     if not filename.strip():
         raise HTTPException(status_code=400, detail="No file name provided.")
@@ -441,15 +450,27 @@ async def upload(file: UploadFile = File(...)) -> Dict[str, Any]:
     try:
         df, raw = read_dataframe_and_raw(file)
         safe_name = os.path.basename(filename)
-        RAW_DIR.mkdir(parents=True, exist_ok=True)
-        save_path = RAW_DIR / safe_name
+        paths = get_user_paths(user_id)
+
+        # Create backup of existing raw file before overwriting
+        if paths["raw_pkl"].exists():
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_backup_name = os.path.splitext(safe_name)[0].replace(" ", "_")
+            backup_path = paths["raw_pkl"].parent / f"data_raw_{safe_backup_name}_{timestamp}.pkl"
+            paths["raw_pkl"].rename(backup_path)
+
+        save_path = paths["raw_pkl"].parent / safe_name
         with save_path.open("wb") as f:
             f.write(raw)
-        df.to_pickle(_ENGINE_PKL)
-        if _CLEAN_PKL.exists():
-            _CLEAN_PKL.unlink()
-        df.to_pickle(ACTIVE_DATASET_PKL)
-        persist_metadata(file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=file.filename)
+        df.to_pickle(paths["raw_pkl"])
+        if paths["clean_pkl"].exists():
+            paths["clean_pkl"].unlink()
+        df.to_pickle(paths["active_pkl"])
+        persist_metadata(user_id=user_id, file_name=safe_name, df=df, raw_size_bytes=len(raw), original_filename=file.filename)
+
+        # Track upload history
+        _save_upload_history(paths, filename, df, len(raw))
+
         return {
             "status": "success",
             "metadata": {"fileName": safe_name, "rows": int(len(df)), "columns": int(len(df.columns)),
@@ -468,10 +489,13 @@ class CleanActionRequest(BaseModel):
 
 
 @app.post("/api/data/clean")
-async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
+async def api_data_clean(
+    req: CleanActionRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     """Interactive data cleaning. Reads clean→raw fallback, saves to data_clean.pkl."""
     try:
-        df = _load_working_dataframe()
+        df = _load_working_dataframe(user_id)
         original_rows = int(len(df))
         original_missing = int(df.isna().sum().sum())
         original_duplicated = int(df.duplicated().sum())
@@ -503,13 +527,14 @@ async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
         else:
             raise HTTPException(status_code=400, detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_mean, impute_median, impute_mode, drop_missing_rows, standardize_text")
 
-        df.to_pickle(_CLEAN_PKL)
-        df.to_pickle(ACTIVE_DATASET_PKL)
+        paths = get_user_paths(user_id)
+        df.to_pickle(paths["clean_pkl"])
+        df.to_pickle(paths["active_pkl"])
 
         existing_meta: dict[str, Any] = {}
-        if ACTIVE_DATASET_META_JSON.exists():
+        if paths["active_meta"].exists():
             try:
-                with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                with paths["active_meta"].open("r", encoding="utf-8") as f:
                     existing_meta = json.load(f) or {}
             except Exception:
                 existing_meta = {}
@@ -521,7 +546,7 @@ async def api_data_clean(req: CleanActionRequest) -> Dict[str, Any]:
             "fileSize": existing_meta.get("fileSize", "0 B"),
             "uploadedAt": existing_meta.get("uploadedAt", ""),
         }
-        with ACTIVE_DATASET_META_JSON.open("w", encoding="utf-8") as f:
+        with paths["active_meta"].open("w", encoding="utf-8") as f:
             json.dump(meta_payload, f, ensure_ascii=False, indent=2)
 
         dataset_meta = _compute_dataset_meta(df)
@@ -545,10 +570,10 @@ class ExecuteCleaningRequest(BaseModel):
 
 
 @app.get("/api/data/cleaning-summary")
-async def api_cleaning_summary() -> Dict[str, Any]:
+async def api_cleaning_summary(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     """Return cleaning diagnostics with per-column missing value counts."""
     try:
-        df = _load_working_dataframe()
+        df = _load_working_dataframe(user_id)
         missing_per_col: List[Dict[str, Any]] = []
         for col in df.columns:
             missing_per_col.append({"column": str(col), "type": str(df[col].dtype), "missing_count": int(df[col].isna().sum())})
@@ -564,17 +589,21 @@ async def api_cleaning_summary() -> Dict[str, Any]:
 
 
 @app.post("/api/data/execute-cleaning")
-async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
-    """Execute a cleaning action and persist result to data/clean/data_clean.pkl."""
+async def api_execute_cleaning(
+    req: ExecuteCleaningRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
+    """Execute a cleaning action and persist result to user's data_clean.pkl."""
     try:
         action = req.action.strip()
         if action == "reset_raw":
-            if _ENGINE_PKL.exists():
+            paths = get_user_paths(user_id)
+            if paths["raw_pkl"].exists():
                 import shutil
-                shutil.copy2(_ENGINE_PKL, _CLEAN_PKL)
-                df = pd.read_pickle(_CLEAN_PKL)
-            elif _CLEAN_PKL.exists():
-                df = pd.read_pickle(_CLEAN_PKL)
+                shutil.copy2(paths["raw_pkl"], paths["clean_pkl"])
+                df = pd.read_pickle(paths["clean_pkl"])
+            elif paths["clean_pkl"].exists():
+                df = pd.read_pickle(paths["clean_pkl"])
             else:
                 raise HTTPException(status_code=404, detail="No dataset found.")
             return clean_json_payload({
@@ -583,7 +612,7 @@ async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
                 "total_duplicated_rows": int(df.duplicated().sum()), "total_missing_cells": int(df.isna().sum().sum()),
             })
 
-        df = _load_working_dataframe()
+        df = _load_working_dataframe(user_id)
         msg = ""
         if action == "drop_duplicates":
             before = int(len(df))
@@ -603,7 +632,8 @@ async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
         else:
             raise HTTPException(status_code=400, detail=f"Unknown action: '{action}'. Valid: drop_duplicates, impute_missing, reset_raw")
 
-        df.to_pickle(_CLEAN_PKL)
+        paths = get_user_paths(user_id)
+        df.to_pickle(paths["clean_pkl"])
         return clean_json_payload({
             "status": "success", "message": msg,
             "total_rows": int(len(df)), "total_columns": int(len(df.columns)),
@@ -616,9 +646,12 @@ async def api_execute_cleaning(req: ExecuteCleaningRequest) -> Dict[str, Any]:
 
 
 @app.post("/api/preview")
-async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+async def api_preview(
+    file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         preview_data = build_dataset_preview(df, n_head=10)
         return clean_json_payload({"status": "success", "result": preview_data})
     except HTTPException:
@@ -628,9 +661,12 @@ async def api_preview(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]
 
 
 @app.post("/api/analysis/numeric")
-async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+async def analysis_numeric(
+    file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         return clean_json_payload({"status": "success", "result": describe_numeric(df)})
     except HTTPException:
         raise
@@ -639,9 +675,12 @@ async def analysis_numeric(file: Optional[UploadFile] = File(None)) -> Dict[str,
 
 
 @app.post("/api/analysis/categorical")
-async def analysis_categorical(file: Optional[UploadFile] = File(None)) -> Dict[str, Any]:
+async def analysis_categorical(
+    file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         return clean_json_payload({"status": "success", "result": describe_categorical(df)})
     except HTTPException:
         raise
@@ -684,10 +723,10 @@ def make_json_safe(obj: Any) -> Any:
 
 
 @app.get("/api/data/ai-schema")
-async def api_data_ai_schema() -> Dict[str, Any]:
+async def api_data_ai_schema(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     """Load active dataset, classify columns, and query AI engine for validation."""
     try:
-        df = _load_working_dataframe()
+        df = _load_working_dataframe(user_id)
 
         rule_baseline = {}
         for col in df.columns:
@@ -786,6 +825,30 @@ async def api_data_ai_schema() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Server error in ai-schema: {e}")
 
 
+@app.get("/api/data/me")
+async def get_my_data_status(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
+    """Return current user's dataset status (has raw, has clean, metadata)."""
+    try:
+        paths = get_user_paths(user_id)
+        metadata = None
+        if paths["active_meta"].exists():
+            try:
+                with paths["active_meta"].open("r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+            except Exception:
+                metadata = None
+        return {
+            "status": "success",
+            "has_raw_data": paths["raw_pkl"].exists(),
+            "has_clean_data": paths["clean_pkl"].exists(),
+            "metadata": metadata,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
 class ChartRenderRequest(BaseModel):
     scope: str  # "univariate" | "bivariate" | "multivariate" | "timeseries"
     var_x: Optional[str] = None
@@ -795,10 +858,13 @@ class ChartRenderRequest(BaseModel):
 
 
 @app.post("/api/data/chart-render")
-async def api_data_chart_render(req: ChartRenderRequest) -> Dict[str, Any]:
+async def api_data_chart_render(
+    req: ChartRenderRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     """Advanced statistical computation engine for 4 distinct visualization scopes."""
     try:
-        df = _load_working_dataframe()
+        df = _load_working_dataframe(user_id)
         scope = req.scope.strip().lower()
         var_x = (req.var_x or "").strip() or None
         var_y = (req.var_y or "").strip() or None
@@ -1007,9 +1073,10 @@ async def api_data_chart_render(req: ChartRenderRequest) -> Dict[str, Any]:
 @app.post("/api/visualization/numerical")
 async def visualization_numerical(
     col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         options = generate_numerical_plot(df, col, chart_type)
         return clean_json_payload({"status": "success", "chart_type": chart_type, "column": col, "options": options})
     except ValueError as e:
@@ -1023,9 +1090,10 @@ async def visualization_numerical(
 @app.post("/api/visualization/categorical")
 async def visualization_categorical(
     col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         options = generate_categorical_plot(df, col, chart_type)
         return clean_json_payload({"status": "success", "chart_type": chart_type, "column": col, "options": options})
     except ValueError as e:
@@ -1039,9 +1107,10 @@ async def visualization_categorical(
 @app.post("/api/visualization/bivariate")
 async def visualization_bivariate(
     x_col: str = Form(...), y_col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         options = generate_bivariate_plot(df, x_col, y_col, chart_type)
         return clean_json_payload({"status": "success", "chart_type": chart_type, "x_col": x_col, "y_col": y_col, "options": options})
     except ValueError as e:
@@ -1057,9 +1126,10 @@ async def visualization_bivariate(
 @app.post("/api/insights/univariate")
 async def insights_univariate(
     col: str = Form(...), type: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         col_type = type.lower().strip()
         stats = _extract_column_stats(df, col, col_type)
         stats["column"] = col
@@ -1077,9 +1147,10 @@ async def insights_univariate(
 @app.post("/api/insights/bivariate")
 async def insights_bivariate(
     x_col: str = Form(...), y_col: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
-        df = _resolve_dataframe(file)
+        df = _resolve_dataframe(file, user_id)
         summary = _build_bivariate_summary(df, x_col, y_col)
         insight = generate_ai_insight(summary, "bivariate")
         return clean_json_payload({"status": "success", "x_col": x_col, "y_col": y_col, "stats": summary, "insight": insight})
@@ -1110,9 +1181,12 @@ async def get_text_insight(payload: TextInsightRequest) -> Dict[str, Any]:
 
 
 @app.post("/api/insights/recommend-chart")
-async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]:
+async def recommend_chart(
+    payload: ChartRecommendationRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
     try:
-        df = _load_active_dataset_df()
+        df = _load_active_dataset_df(user_id)
         col = payload.column_name
         if col not in df.columns:
             raise HTTPException(status_code=400, detail=f"Column '{col}' not found in dataset.")
@@ -1141,13 +1215,14 @@ async def recommend_chart(payload: ChartRecommendationRequest) -> Dict[str, Any]
 # ── Report & Export Endpoints ─────────────────────────────────────────────────
 
 @app.post("/api/export/report")
-async def export_report() -> Dict[str, Any]:
+async def export_report(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     try:
-        df = _load_active_dataset_df()
+        df = _load_active_dataset_df(user_id)
+        paths = get_user_paths(user_id)
         dataset_meta = {}
-        if ACTIVE_DATASET_META_JSON.exists():
+        if paths["active_meta"].exists():
             try:
-                with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+                with paths["active_meta"].open("r", encoding="utf-8") as f:
                     dataset_meta = json.load(f) or {}
             except Exception:
                 dataset_meta = {}
@@ -1224,9 +1299,9 @@ async def export_report() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 
-def _active_dataset_or_404() -> pd.DataFrame:
+def _active_dataset_or_404(user_id: str) -> pd.DataFrame:
     try:
-        return _load_active_dataset_df()
+        return _load_active_dataset_df(user_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -1234,9 +1309,9 @@ def _active_dataset_or_404() -> pd.DataFrame:
 
 
 @app.get("/api/interpretation")
-async def api_interpretation() -> Dict[str, Any]:
+async def api_interpretation(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     try:
-        df = _active_dataset_or_404()
+        df = _active_dataset_or_404(user_id)
         result = build_interpretation(df)
         return clean_json_payload({"status": "success", "result": result})
     except HTTPException:
@@ -1246,9 +1321,9 @@ async def api_interpretation() -> Dict[str, Any]:
 
 
 @app.get("/api/reports")
-async def api_reports() -> Dict[str, Any]:
+async def api_reports(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     try:
-        df = _active_dataset_or_404()
+        df = _active_dataset_or_404(user_id)
         report = build_full_report(df)
         return clean_json_payload({"status": "success", "result": report})
     except HTTPException:
@@ -1258,12 +1333,13 @@ async def api_reports() -> Dict[str, Any]:
 
 
 @app.get("/api/download/csv")
-async def download_csv() -> StreamingResponse:
+async def download_csv(user_id: str = Depends(require_user_id)) -> StreamingResponse:
     try:
-        df = _active_dataset_or_404()
+        df = _active_dataset_or_404(user_id)
+        paths = get_user_paths(user_id)
         meta = {}
-        if ACTIVE_DATASET_META_JSON.exists():
-            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+        if paths["active_meta"].exists():
+            with paths["active_meta"].open("r", encoding="utf-8") as f:
                 meta = json.load(f)
         base_name = Path(meta.get("fileName", "dataset")).stem
         content = dataframe_to_csv_bytes(df)
@@ -1276,12 +1352,13 @@ async def download_csv() -> StreamingResponse:
 
 
 @app.get("/api/download/xlsx")
-async def download_xlsx() -> StreamingResponse:
+async def download_xlsx(user_id: str = Depends(require_user_id)) -> StreamingResponse:
     try:
-        df = _active_dataset_or_404()
+        df = _active_dataset_or_404(user_id)
+        paths = get_user_paths(user_id)
         meta = {}
-        if ACTIVE_DATASET_META_JSON.exists():
-            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+        if paths["active_meta"].exists():
+            with paths["active_meta"].open("r", encoding="utf-8") as f:
                 meta = json.load(f)
         base_name = Path(meta.get("fileName", "dataset")).stem
         numeric_stats, categorical_stats = build_stats_bundle(df)
@@ -1296,12 +1373,13 @@ async def download_xlsx() -> StreamingResponse:
 
 
 @app.get("/api/download/pdf")
-async def download_pdf() -> StreamingResponse:
+async def download_pdf(user_id: str = Depends(require_user_id)) -> StreamingResponse:
     try:
-        df = _active_dataset_or_404()
+        df = _active_dataset_or_404(user_id)
+        paths = get_user_paths(user_id)
         meta = {}
-        if ACTIVE_DATASET_META_JSON.exists():
-            with ACTIVE_DATASET_META_JSON.open("r", encoding="utf-8") as f:
+        if paths["active_meta"].exists():
+            with paths["active_meta"].open("r", encoding="utf-8") as f:
                 meta = json.load(f)
         base_name = Path(meta.get("fileName", "dataset")).stem
         report = build_full_report(df)
@@ -1497,8 +1575,11 @@ def _parse_uploaded_bytes(raw_bytes: bytes, filename: str) -> pd.DataFrame:
 # ── POST /api/data/analyze ────────────────────────────────────────────────────
 
 @app.post("/api/data/analyze")
-async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """Upload a file → parse raw DataFrame → save to data_raw.pkl → run EDA + health metrics."""
+async def analyze_data_post(
+    file: UploadFile = File(...),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
+    """Upload a file → parse raw DataFrame → save to user's data_raw.pkl → run EDA + health metrics."""
     filename = file.filename or ""
     if not filename.strip():
         raise HTTPException(status_code=400, detail="No file name provided.")
@@ -1512,14 +1593,37 @@ async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
         df_raw = _parse_uploaded_bytes(raw_bytes, filename)
-        df_raw.to_pickle(_ENGINE_PKL)
+        paths = get_user_paths(user_id)
 
-        if _CLEAN_PKL.exists():
-            _CLEAN_PKL.unlink()
+        # Create backup of existing raw file before overwriting
+        if paths["raw_pkl"].exists():
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_backup_name = os.path.splitext(os.path.basename(filename))[0].replace(" ", "_")
+            backup_path = paths["raw_pkl"].parent / f"data_raw_{safe_backup_name}_{timestamp}.pkl"
+            paths["raw_pkl"].rename(backup_path)
+
+        df_raw.to_pickle(paths["raw_pkl"])
+
+        if paths["clean_pkl"].exists():
+            paths["clean_pkl"].unlink()
+
+        # Persist active dataset and metadata so other pages can access the data
+        df_raw.to_pickle(paths["active_pkl"])
+        persist_metadata(
+            user_id=user_id,
+            file_name=os.path.basename(filename),
+            df=df_raw,
+            raw_size_bytes=len(raw_bytes),
+            original_filename=filename,
+        )
+
+        # Track upload history
+        _save_upload_history(paths, filename, df_raw, len(raw_bytes))
 
         payload = _run_eda(df_raw)
         payload["status"] = "success"
         payload["metadata"]["fileName"] = filename
+        payload["metadata"]["fileSize"] = _format_file_size(len(raw_bytes))
 
         sample_n = min(10, len(df_raw))
         preview_records = df_raw.sample(n=sample_n, random_state=42).to_dict(orient="records")
@@ -1533,20 +1637,126 @@ async def analyze_data_post(file: UploadFile = File(...)) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Server error: {exc}") from exc
 
 
+# ── Upload History Helpers ─────────────────────────────────────────────────────
+
+_UPLOAD_HISTORY_MAX = 10
+_BACKUP_MAX = 10
+
+
+def _save_upload_history(paths: dict, filename: str, df: pd.DataFrame, raw_size: int) -> None:
+    """Append an upload entry to the user's history file and cleanup old backups."""
+    history_file = paths["raw_pkl"].parent / "upload_history.json"
+    history: list[dict] = []
+    if history_file.exists():
+        try:
+            with history_file.open("r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    history.append({
+        "fileName": filename,
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+        "rows": int(len(df)),
+        "columns": int(len(df.columns)),
+        "fileSize": raw_size,
+    })
+
+    # Keep only last N entries
+    history = history[-_UPLOAD_HISTORY_MAX:]
+
+    with history_file.open("w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    # Cleanup old backup pickle files (keep only most recent _BACKUP_MAX)
+    user_dir = paths["raw_pkl"].parent
+    backups = sorted(user_dir.glob("data_raw_*.pkl"))
+    while len(backups) > _BACKUP_MAX:
+        backups[0].unlink(missing_ok=True)
+        backups = backups[1:]
+
+
+@app.get("/api/data/history")
+async def get_upload_history(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
+    """Return last 10 uploads for the current user."""
+    paths = get_user_paths(user_id)
+    history_file = paths["raw_pkl"].parent / "upload_history.json"
+
+    if not history_file.exists():
+        return {"status": "success", "history": []}
+
+    try:
+        with history_file.open("r", encoding="utf-8") as f:
+            history = json.load(f)
+        return {"status": "success", "history": history}
+    except Exception:
+        return {"status": "success", "history": []}
+
+
+class RestoreRequest(BaseModel):
+    fileName: str
+
+
+@app.post("/api/data/restore")
+async def restore_dataset(
+    req: RestoreRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
+    """Restore a dataset from history by filename."""
+    paths = get_user_paths(user_id)
+    history_file = paths["raw_pkl"].parent / "upload_history.json"
+
+    if not history_file.exists():
+        raise HTTPException(status_code=404, detail="No upload history found.")
+
+    with history_file.open("r", encoding="utf-8") as f:
+        history = json.load(f)
+
+    entry = next((h for h in history if h["fileName"] == req.fileName), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Dataset '{req.fileName}' not found in history.")
+
+    # Find the corresponding backup file (pattern: data_raw_{safe_name}_{timestamp}.pkl)
+    safe_name = os.path.splitext(req.fileName)[0].replace(" ", "_")
+    user_dir = paths["raw_pkl"].parent
+    backup_files = sorted(user_dir.glob(f"data_raw_{safe_name}_*.pkl"))
+
+    if not backup_files:
+        raise HTTPException(status_code=404, detail="Backup file not found.")
+
+    backup_file = backup_files[-1]  # Most recent backup
+
+    shutil.copy2(backup_file, paths["raw_pkl"])
+    shutil.copy2(backup_file, paths["active_pkl"])
+
+    # Clean the clean_pkl since we're restoring raw data
+    if paths["clean_pkl"].exists():
+        paths["clean_pkl"].unlink()
+
+    return {
+        "status": "success",
+        "message": f"Restored '{req.fileName}'",
+        "fileName": entry["fileName"],
+        "rows": entry["rows"],
+        "columns": entry["columns"],
+    }
+
+
 # ── GET /api/data/analyze ─────────────────────────────────────────────────────
 
 @app.get("/api/data/analyze")
-async def analyze_data_get() -> Dict[str, Any]:
+async def analyze_data_get(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     """
     Cross-page auto-fetch endpoint.
     Used by data-cleaning page to fetch diagnostics on mount.
     Returns: {"status": "success", "dataset_meta": {"total_rows": int, "total_columns": int, "total_duplicated_rows": int, "total_missing_cells": int}}
     """
-    if not _ENGINE_PKL.exists():
+    paths = get_user_paths(user_id)
+    if not paths["raw_pkl"].exists():
         return {"status": "no_data"}
 
     try:
-        df_source = pd.read_pickle(_CLEAN_PKL) if _CLEAN_PKL.exists() else pd.read_pickle(_ENGINE_PKL)
+        df_source = pd.read_pickle(paths["clean_pkl"]) if paths["clean_pkl"].exists() else pd.read_pickle(paths["raw_pkl"])
         payload = _run_eda(df_source)
         payload["status"] = "success"
 

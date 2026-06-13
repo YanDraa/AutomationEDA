@@ -16,6 +16,7 @@ type DatasetContextValue = {
   dataset: DatasetInfo | null;
   setDataset: (dataset: DatasetInfo) => void;
   clearDataset: () => void;
+  refreshDataset: () => Promise<void>;
 };
 
 const DatasetContext = createContext<DatasetContextValue | undefined>(undefined);
@@ -41,13 +42,51 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
     setDatasetState(null);
   }, []);
 
+  const refreshDataset = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/data/me", {
+        credentials: "include",
+      });
+      if (!res.ok) { setDatasetState(null); return; }
+      const json = (await res.json()) as {
+        status: string;
+        has_raw_data: boolean;
+        metadata: {
+          fileName?: string;
+          rows?: number;
+          columns?: number;
+          fileSize?: string;
+          uploadedAt?: string;
+        } | null;
+      };
+      if (!json.has_raw_data || !json.metadata) {
+        setDatasetState(null);
+        return;
+      }
+      const meta = json.metadata;
+      const uploadedAt = meta.uploadedAt
+        ? toUploadTimeString(new Date(meta.uploadedAt))
+        : "-";
+      setDatasetState({
+        fileName: meta.fileName ?? "dataset",
+        rows: meta.rows ?? 0,
+        columns: meta.columns ?? 0,
+        fileSize: meta.fileSize ?? "-",
+        uploadTime: uploadedAt,
+      });
+    } catch {
+      setDatasetState(null);
+    }
+  }, []);
+
   const value = useMemo<DatasetContextValue>(
     () => ({
       dataset,
       setDataset,
       clearDataset,
+      refreshDataset,
     }),
-    [dataset, setDataset, clearDataset],
+    [dataset, setDataset, clearDataset, refreshDataset],
   );
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
@@ -64,9 +103,10 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
   const form = new FormData();
   form.append("file", file);
 
-  const res = await fetch("http://127.0.0.1:8000/api/upload", {
+  const res = await fetch("http://localhost:8000/api/upload", {
     method: "POST",
     body: form,
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -87,7 +127,7 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
     } catch {
       if (res.status === 0 || res.status >= 500) {
         detail =
-          "Backend tidak merespons. Pastikan server berjalan di http://127.0.0.1:8000";
+          "Backend tidak merespons. Pastikan server berjalan di http://localhost:8000";
       }
     }
     throw new Error(detail);

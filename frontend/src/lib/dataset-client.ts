@@ -23,9 +23,10 @@ export type CurrentDatasetResponse = {
 
 
 export async function fetchCurrentDataset(): Promise<CurrentDatasetResponse | null> {
-  const res = await fetch("http://127.0.0.1:8000/api/current-dataset", {
+  const res = await fetch("http://localhost:8000/api/current-dataset", {
     method: "GET",
     headers: { "Accept": "application/json" },
+    credentials: "include",
   });
 
   if (!res.ok) return null;

@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 
 
-import { AlertCircle, Tag, Upload } from "lucide-react";
-import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { EmptyDataset } from "@/components/empty-dataset";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDataset } from "@/context/dataset-context";
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "http://localhost:8000";
 
 interface CatStats {
   [column: string]: {
@@ -44,6 +44,7 @@ export default function Page() {
         const res = await fetch(`${BACKEND_URL}/api/analysis/categorical`, {
           method: "POST",
           headers: { Accept: "application/json" },
+          credentials: "include",
           // No file uploaded; backend will fallback to server-cached dataset
           body: undefined,
         });
@@ -76,14 +77,10 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
-        <div className="rounded-full bg-muted p-4"><Tag className="size-8 text-muted-foreground" /></div>
-        <div>
-          <p className="font-medium">Belum ada dataset</p>
-          <p className="mt-1 text-muted-foreground text-sm">Upload file terlebih dahulu.</p>
-        </div>
-        <Button asChild size="sm"><Link href="/dashboard"><Upload className="size-4" />Upload Sekarang</Link></Button>
-      </div>
+      <EmptyDataset
+        title="No dataset loaded"
+        description="Upload a file first to view categorical statistics."
+      />
     );
   }
 

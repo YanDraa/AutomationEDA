@@ -26,7 +26,7 @@ export function MetricCards() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("http://127.0.0.1:8000/api/current-dataset")
+    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiDataset) => { if (d.activated) setApi(d); })
       .catch(() => {});
