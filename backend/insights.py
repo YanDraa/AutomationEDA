@@ -425,3 +425,200 @@ def _fallback_generic(s: Dict[str, Any]) -> str:
         f"- AI insight tidak tersedia saat ini; gunakan angka di atas sebagai acuan.\n"
         f"- Pertimbangkan visualisasi grafik untuk konteks tambahan."
     )
+
+import numpy as np
+import pandas as pd
+
+def generate_intelligent_insights(df: pd.DataFrame) -> dict:
+    insights = {
+        "highest_average": [],
+        "most_missing": [],
+        "highest_outliers": [],
+        "largest_std": [],
+        "strongest_correlations": {"positive": [], "negative": []},
+        "data_distribution": [],
+        "time_series_pattern": None
+    }
+    
+    if df is None or df.empty:
+        return insights
+        
+    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    all_cols = df.columns.tolist()
+    
+    # 1. Highest Average Values
+    if num_cols:
+        means = df[num_cols].mean().sort_values(ascending=False).dropna()
+        for col, val in means.head(5).items():
+            insights["highest_average"].append({
+                "column": col,
+                "mean": float(val),
+                "insight": f"Rata-rata tertinggi pada kolom {col} ({val:.4f}). Nilai ini menunjukkan titik pusat distribusi yang dominan."
+            })
+            
+    # 2. Most Missing Values
+    missing = df.isnull().sum()
+    missing_pct = (missing / len(df)) * 100
+    missing_df = pd.DataFrame({'count': missing, 'percentage': missing_pct})
+    missing_df = missing_df[missing_df['count'] > 0].sort_values(by='count', ascending=False)
+    for col, row in missing_df.head(5).iterrows():
+        insights["most_missing"].append({
+            "column": col,
+            "missing_count": int(row['count']),
+            "missing_percentage": float(row['percentage']),
+            "insight": f"Kolom {col} memiliki {int(row['count'])} nilai kosong ({row['percentage']:.2f}%)."
+        })
+        
+    # 3. Highest Number of Outliers
+    if num_cols:
+        outlier_data = []
+        for col in num_cols:
+            q1 = df[col].quantile(0.25)
+            q3 = df[col].quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - (1.5 * iqr)
+            upper_bound = q3 + (1.5 * iqr)
+            outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
+            count = len(outliers)
+            if count > 0:
+                pct = (count / len(df)) * 100
+                outlier_data.append({
+                    "column": col,
+                    "outlier_count": int(count),
+                    "outlier_percentage": float(pct),
+                    "insight": f"Terdapat {count} outlier ({pct:.2f}%) pada kolom {col} (metode IQR)."
+                })
+        outlier_data.sort(key=lambda x: x["outlier_count"], reverse=True)
+        insights["highest_outliers"] = outlier_data[:5]
+        
+    # 4. Largest Standard Deviation
+    if num_cols:
+        stds = df[num_cols].std().sort_values(ascending=False).dropna()
+        means_for_cv = df[num_cols].mean()
+        for col, val in stds.head(5).items():
+            mean_val = means_for_cv.get(col, 1)
+            cv = val / mean_val if mean_val != 0 else 0
+            insights["largest_std"].append({
+                "column": col,
+                "std": float(val),
+                "cv": float(cv),
+                "insight": f"Kolom {col} memiliki standar deviasi terbesar ({val:.4f}), menunjukkan volatilitas/sebaran data yang tinggi."
+            })
+            
+    # 5. Strongest Correlations
+    if len(num_cols) > 1:
+        corr_matrix = df[num_cols].corr()
+        corr_unstacked = corr_matrix.unstack().dropna()
+        corr_filtered = corr_unstacked[corr_unstacked.index.get_level_values(0) != corr_unstacked.index.get_level_values(1)]
+        unique_pairs = []
+        seen = set()
+        for (col1, col2), val in corr_filtered.items():
+            pair = tuple(sorted([col1, col2]))
+            if pair not in seen:
+                seen.add(pair)
+                unique_pairs.append({'col1': col1, 'col2': col2, 'value': float(val)})
+        unique_pairs.sort(key=lambda x: abs(x['value']), reverse=True)
+        
+        pos_corrs = [p for p in unique_pairs if p['value'] > 0]
+        neg_corrs = [p for p in unique_pairs if p['value'] < 0]
+        
+        for p in pos_corrs[:3]:
+            insights["strongest_correlations"]["positive"].append({
+                "pair": f"{p['col1']} - {p['col2']}",
+                "value": p['value'],
+                "insight": f"Korelasi positif kuat ({p['value']:.4f}). Jika {p['col1']} naik, {p['col2']} cenderung naik."
+            })
+        for p in neg_corrs[:3]:
+            insights["strongest_correlations"]["negative"].append({
+                "pair": f"{p['col1']} - {p['col2']}",
+                "value": p['value'],
+                "insight": f"Korelasi negatif kuat ({p['value']:.4f}). Jika {p['col1']} naik, {p['col2']} cenderung turun."
+            })
+            
+    # 6. Data Distribution Normality
+    if num_cols:
+        for col in num_cols:
+            try:
+                skewness = float(df[col].skew()) if not pd.isna(df[col].skew()) else 0.0
+                kurtosis = float(df[col].kurt()) if not pd.isna(df[col].kurt()) else 0.0
+            except:
+                skewness = 0.0
+                kurtosis = 0.0
+                
+            if abs(skewness) < 0.5 and abs(kurtosis) < 0.5:
+                label = "Normal-like Distribution"
+                impact = "Distribusi mendekati normal. Cocok untuk sebagian besar model statistik linier tanpa transformasi kompleks."
+            elif skewness > 0.5:
+                label = "Right-Skewed (Positively Skewed)"
+                impact = "Data condong ke kanan. Membutuhkan transformasi (misal: log atau akar kuadrat) sebelum analisis regresi linier untuk menormalkan distribusi."
+            elif skewness < -0.5:
+                label = "Left-Skewed (Negatively Skewed)"
+                impact = "Data condong ke kiri. Membutuhkan transformasi untuk menormalkan distribusi sebelum penggunaan model berdasar asumsi normalitas."
+            else:
+                label = "Non-Normal Distribution"
+                impact = "Distribusi tidak mengikuti bentuk lonceng sempurna, mungkin memiliki ekor tebal atau datar."
+                
+            insights["data_distribution"].append({
+                "column": col,
+                "skewness": skewness,
+                "kurtosis": kurtosis,
+                "label": label,
+                "impact": impact
+            })
+            
+    # 7. Time Series Pattern Summaries
+    dt_cols = df.select_dtypes(include=['datetime64', 'datetimetz']).columns.tolist()
+    if not dt_cols:
+        for col in df.columns:
+            if 'date' in col.lower() or 'time' in col.lower() or 'tanggal' in col.lower():
+                try:
+                    df_col_parsed = pd.to_datetime(df[col], errors='coerce')
+                    if df_col_parsed.notna().sum() > len(df) * 0.5:
+                        dt_cols.append(col)
+                except:
+                    pass
+                    
+    if dt_cols and num_cols:
+        dt_col = dt_cols[0]
+        try:
+            ts_df = df[[dt_col] + num_cols].copy()
+            if not pd.api.types.is_datetime64_any_dtype(ts_df[dt_col]):
+                ts_df[dt_col] = pd.to_datetime(ts_df[dt_col], errors='coerce')
+            ts_df = ts_df.dropna(subset=[dt_col]).sort_values(by=dt_col)
+            if len(ts_df) > 10:
+                target_col = ts_df[num_cols].var().idxmax()
+                y = ts_df[target_col].dropna().values
+                if len(y) > 10:
+                    x = np.arange(len(y))
+                    z = np.polyfit(x, y, 1)
+                    slope = z[0]
+                    mean_y = np.mean(y)
+                    
+                    if slope > 0.05 * abs(mean_y):
+                        trend = "Upward"
+                    elif slope < -0.05 * abs(mean_y):
+                        trend = "Downward"
+                    else:
+                        trend = "Stationary/Flat"
+                        
+                    rolling_var = pd.Series(y).rolling(window=max(2, len(y)//10)).var().mean()
+                    
+                    insights["time_series_pattern"] = {
+                        "datetime_column": dt_col,
+                        "target_column": target_col,
+                        "trend": trend,
+                        "fluctuation_variance": float(rolling_var) if not pd.isna(rolling_var) else 0.0,
+                        "insight": f"Berdasarkan deret waktu ({dt_col}), metrik {target_col} menunjukkan tren {trend}."
+                    }
+                else:
+                    insights["time_series_pattern"] = {"status": "Skipped due to insufficient valid numerical data."}
+            else:
+                insights["time_series_pattern"] = {"status": "Skipped due to insufficient data points for Time Series analysis."}
+        except Exception as e:
+            insights["time_series_pattern"] = {"status": f"Skipped due to error: {str(e)}"}
+    else:
+        insights["time_series_pattern"] = {
+            "status": "Skipped due to no datetime column or numerical column found."
+        }
+
+    return insights

@@ -110,3 +110,39 @@ export async function downloadExport(
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+export async function generateAndDownloadReport(
+  format: "html" | "pdf",
+  includedSections: string[],
+  fileName: string,
+): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/reports/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      format,
+      included_sections: includedSections,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res, `Gagal mengunduh file ${format.toUpperCase()}.`));
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition");
+  const match = disposition?.match(/filename="?([^"]+)"?/);
+  const downloadName = match?.[1] ?? `${fileName}_EDA_Report.${format}`;
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = downloadName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

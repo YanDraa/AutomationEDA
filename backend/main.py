@@ -37,6 +37,7 @@ from backend.reports import (
     dataframe_to_csv_bytes,
     dataframe_to_xlsx_bytes,
     report_to_pdf_bytes,
+    generate_eda_report,
 )
 from backend.utils import (
     ACTIVE_DATASET_META_JSON,
@@ -75,7 +76,7 @@ from backend.auth import (
     ACCESS_TOKEN_EXPIRE_DAYS,
 )
 from cleaning import clean_dataset
-from insights import generate_ai_insight, get_chart_recommendation
+from insights import generate_ai_insight, get_chart_recommendation, generate_intelligent_insights
 
 # ── Persistence paths ─────────────────────────────────────────────────────────
 _ENGINE_PKL = RAW_DATASET_PKL
@@ -660,6 +661,58 @@ async def api_preview(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+
+@app.get("/api/insights")
+async def api_insights_executive(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
+    try:
+        df = _load_working_dataframe(user_id)
+        insights_data = generate_intelligent_insights(df)
+        return clean_json_payload({"status": "success", "result": insights_data})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
+
+class GenerateReportRequest(BaseModel):
+    format: str
+    included_sections: List[str]
+
+@app.post("/api/reports/generate")
+async def api_generate_report(
+    req: GenerateReportRequest,
+    user_id: str = Depends(require_user_id),
+):
+    try:
+        df = _load_working_dataframe(user_id)
+        
+        sections = req.included_sections
+        if not sections:
+            sections = ["missing_data", "outliers", "statistical_profile", "executive_insights"]
+            
+        report_bytes = generate_eda_report(df, req.format, sections)
+        
+        media_type = "application/pdf" if req.format.lower() == "pdf" else "text/html"
+        ext = "pdf" if req.format.lower() == "pdf" else "html"
+        
+        paths = get_user_paths(user_id)
+        meta = {}
+        if paths["active_meta"].exists():
+            with paths["active_meta"].open("r", encoding="utf-8") as f:
+                meta = json.load(f)
+        ds_name = meta.get("fileName", "Dataset").replace(" ", "_")
+        filename = f"{ds_name}_EDA_Report.{ext}"
+        
+        return StreamingResponse(
+            io.BytesIO(report_bytes),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {e}")
+
 
 
 @app.post("/api/analysis/numeric")
