@@ -78,10 +78,11 @@ def is_supported_upload(filename: str) -> bool:
     return any(lower.endswith(ext) for ext in SUPPORTED_UPLOAD_EXTENSIONS)
 
 
-def cleanup_orphaned_dataset_metadata() -> None:
-    """Remove stale metadata when the pickled dataset file is missing."""
-    if not ACTIVE_DATASET_PKL.exists() and ACTIVE_DATASET_META_JSON.exists():
-        ACTIVE_DATASET_META_JSON.unlink(missing_ok=True)
+def cleanup_orphaned_dataset_metadata(user_id: str) -> None:
+    """Remove stale metadata when the pickled dataset file is missing for a specific user."""
+    paths = get_user_paths(user_id)
+    if not paths["active_pkl"].exists() and paths["active_meta"].exists():
+        paths["active_meta"].unlink(missing_ok=True)
 
 
 def _read_csv_robust(bio: io.BytesIO, sep: str = ",") -> pd.DataFrame:

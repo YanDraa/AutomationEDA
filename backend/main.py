@@ -237,15 +237,16 @@ def _sanitize_preview_records(records: List[Dict]) -> List[Dict]:
 # ─── Health check ──────────────────────────────────────────────────────────────
 
 @app.get("/")
-async def health_check() -> Dict[str, Any]:
+async def health_check(user_id: str = Depends(require_user_id)) -> Dict[str, Any]:
     try:
-        cleanup_orphaned_dataset_metadata()
+        cleanup_orphaned_dataset_metadata(user_id)
+        paths = get_user_paths(user_id)
         return {
             "status": "ok",
             "service": "Automation EDA API",
-            "dataset_active": ACTIVE_DATASET_PKL.exists(),
-            "engine_pkl_exists": _ENGINE_PKL.exists(),
-            "clean_pkl_exists": _CLEAN_PKL.exists(),
+            "dataset_active": paths["active_pkl"].exists(),
+            "engine_pkl_exists": paths["raw_pkl"].exists(),
+            "clean_pkl_exists": paths["clean_pkl"].exists(),
             "data_dirs": {"raw": str(RAW_DIR), "clean": str(CLEAN_DIR)},
             "supported_uploads": list(SUPPORTED_UPLOAD_EXTENSIONS),
         }

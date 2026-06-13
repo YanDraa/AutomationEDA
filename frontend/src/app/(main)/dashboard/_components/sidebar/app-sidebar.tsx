@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { Command, LogOut } from "lucide-react";
+import { Command } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import {
@@ -75,35 +74,6 @@ function DatasetInformationCard() {
   )
 }
 
-function LogoutButton() {
-  const router = useRouter();
-  const { clearDataset } = useDataset();
-
-  const handleLogout = async () => {
-    try {
-      await fetch("http://localhost:8000/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // Even if backend call fails, clear the cookie client-side
-    }
-    clearDataset();
-    router.push("/landing");
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleLogout}
-      className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <LogOut className="h-4 w-4" />
-      Logout
-    </button>
-  );
-}
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
@@ -140,7 +110,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         className="flex flex-col gap-3 transition-[opacity,height] duration-200 ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-has-data-[collapsible=icon]/sidebar-wrapper:h-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:opacity-0 group-has-data-[collapsible=offcanvas]/sidebar-wrapper:h-0 overflow-hidden"
       >
         <DatasetInformationCard />
-        <LogoutButton />
       </SidebarFooter>
     </Sidebar>
   );

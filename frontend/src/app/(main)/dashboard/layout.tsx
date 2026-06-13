@@ -14,6 +14,7 @@ import { DatasetProvider } from "@/context/dataset-context";
 import { DatasetBootstrapper } from "./_components/dataset-bootstrap";
 
 import { LayoutControls } from "./_components/sidebar/layout-controls";
+import { ProfileMenu } from "./_components/sidebar/profile-menu";
 import { SearchDialog } from "./_components/sidebar/search-dialog";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
 
@@ -72,6 +73,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               <div className="flex items-center gap-2">
                 <LayoutControls />
                 <ThemeSwitcher />
+                <ProfileMenu />
               </div>
             </div>
           </header>
