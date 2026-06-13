@@ -64,6 +64,7 @@ from backend.visualization import (
     generate_bivariate_plot,
     generate_categorical_plot,
     generate_numerical_plot,
+    generate_time_series_plot,
 )
 from backend.auth import (
     COOKIE_NAME,
@@ -1121,6 +1122,27 @@ async def visualization_bivariate(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
+
+@app.post("/api/visualization/time-series")
+async def visualization_time_series(
+    date_col: str = Form(...), value_col: str = Form(...), file: Optional[UploadFile] = File(None),
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
+    try:
+        df = _resolve_dataframe(file, user_id)
+        options = generate_time_series_plot(df, date_col, value_col)
+        return clean_json_payload({
+            "status": "success", 
+            "date_col": date_col, 
+            "value_col": value_col, 
+            "options": options
+        })
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
 # ── Insights Endpoints ────────────────────────────────────────────────────────
 

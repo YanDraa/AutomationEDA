@@ -147,61 +147,6 @@ def generate_bivariate_plot(
     chart_type: str,
 ) -> dict:
     chart_type = chart_type.lower().strip()
-    _require_column(df, x_col)
-    _require_column(df, y_col)
-
-    if chart_type in ("scatter", "scatter plot"):
-        plot_df = df[[x_col, y_col]].copy()
-        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
-        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        plot_df = plot_df.dropna()
-        if plot_df.empty:
-            raise ValueError("No overlapping numeric rows for scatter plot.")
-
-        points = [
-            [float(row[x_col]), float(row[y_col])]
-            for _, row in plot_df.iterrows()
-        ]
-
-        options = _base_options(f"Scatter Plot — {y_col} vs {x_col}", "scatter")
-        options["xAxis"] = {"title": {"text": x_col}}
-        options["yAxis"] = {"title": {"text": y_col}}
-        options["tooltip"] = {
-            "headerFormat": "<b>{series.name}</b><br/>",
-            "pointFormat": f"{x_col}: <b>{{point.x}}</b><br/>{y_col}: <b>{{point.y}}</b>",
-        }
-        options["series"] = [
-            {
-                "name": f"{y_col} vs {x_col}",
-                "data": points,
-                "marker": {"radius": 4, "symbol": "circle"},
-            }
-        ]
-        return options
-
-    if chart_type in ("linechart", "line", "line chart"):
-        plot_df = df[[x_col, y_col]].copy()
-        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
-        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        plot_df = plot_df.dropna().sort_values(x_col)
-        if len(plot_df) < 2:
-            raise ValueError("Line chart requires at least 2 numeric rows.")
-
-        points = [
-            [float(row[x_col]), float(row[y_col])]
-            for _, row in plot_df.iterrows()
-        ]
-
-        options = _base_options(f"Line Chart — {y_col} vs {x_col}", "line")
-        options["xAxis"] = {"title": {"text": x_col}}
-        options["yAxis"] = {"title": {"text": y_col}}
-        options["tooltip"] = {
-            "headerFormat": "<b>{series.name}</b><br/>",
-            "pointFormat": f"{x_col}: <b>{{point.x}}</b><br/>{y_col}: <b>{{point.y}}</b>",
-        }
-        options["plotOptions"] = {"line": {"marker": {"enabled": True, "radius": 3}}}
-        options["series"] = [{"name": f"{y_col} vs {x_col}", "data": points}]
-        return options
 
     if chart_type == "heatmap":
         num_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
@@ -258,6 +203,155 @@ def generate_bivariate_plot(
         ]
         return options
 
-    raise ValueError(
-        f"Unsupported chart_type '{chart_type}'. Use: scatter, linechart, heatmap."
-    )
+    _require_column(df, x_col)
+    _require_column(df, y_col)
+
+    is_x_num = pd.api.types.is_numeric_dtype(df[x_col])
+    is_y_num = pd.api.types.is_numeric_dtype(df[y_col])
+
+    if is_x_num and is_y_num:
+        plot_df = df[[x_col, y_col]].copy()
+        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+        plot_df = plot_df.dropna()
+        if plot_df.empty:
+            raise ValueError("No overlapping numeric rows for scatter plot.")
+
+        points = [
+            [float(row[x_col]), float(row[y_col])]
+            for _, row in plot_df.iterrows()
+        ]
+
+        options = _base_options(f"Scatter Plot — {y_col} vs {x_col}", "scatter")
+        options["xAxis"] = {"title": {"text": x_col}}
+        options["yAxis"] = {"title": {"text": y_col}}
+        options["tooltip"] = {
+            "headerFormat": "<b>{series.name}</b><br/>",
+            "pointFormat": f"{x_col}: <b>{{point.x}}</b><br/>{y_col}: <b>{{point.y}}</b>",
+        }
+        options["series"] = [
+            {
+                "name": f"{y_col} vs {x_col}",
+                "data": points,
+                "marker": {"radius": 4, "symbol": "circle"},
+            }
+        ]
+        return options
+
+    elif not is_x_num and not is_y_num:
+        plot_df = df[[x_col, y_col]].copy().dropna()
+        if plot_df.empty:
+            raise ValueError("No valid overlapping rows for stacked bar chart.")
+        
+        cross = pd.crosstab(plot_df[x_col], plot_df[y_col])
+        categories = cross.index.astype(str).tolist()
+        series_data = []
+        for col in cross.columns:
+            series_data.append({
+                "name": str(col),
+                "data": cross[col].tolist()
+            })
+
+        options = _base_options(f"Stacked Bar Chart — {x_col} by {y_col}", "column")
+        options["xAxis"] = {"categories": categories, "title": {"text": x_col}}
+        options["yAxis"] = {"title": {"text": "Count"}}
+        options["plotOptions"] = {
+            "column": {
+                "stacking": "normal"
+            }
+        }
+        options["series"] = series_data
+        return options
+
+    else:
+        cat_col = x_col if not is_x_num else y_col
+        num_col = y_col if is_x_num else x_col
+        
+        plot_df = df[[cat_col, num_col]].copy()
+        plot_df[num_col] = pd.to_numeric(plot_df[num_col], errors="coerce")
+        plot_df = plot_df.dropna()
+        if plot_df.empty:
+            raise ValueError(f"No valid overlapping rows between {cat_col} and {num_col}.")
+
+        if chart_type in ("bar-aggregation", "bar"):
+            means = plot_df.groupby(cat_col)[num_col].mean().sort_values(ascending=False)
+            categories = means.index.astype(str).tolist()
+            data = means.tolist()
+
+            options = _base_options(f"Bar Aggregation — Mean of {num_col} by {cat_col}", "column")
+            options["xAxis"] = {"categories": categories, "title": {"text": cat_col}}
+            options["yAxis"] = {"title": {"text": f"Mean {num_col}"}}
+            options["plotOptions"] = {
+                "column": {
+                    "colorByPoint": True
+                }
+            }
+            options["series"] = [{"name": f"Mean {num_col}", "data": data}]
+            return options
+        else:
+            groups = plot_df.groupby(cat_col)
+            categories = []
+            boxplot_data = []
+            
+            for cat_name, group in groups:
+                series = group[num_col]
+                if len(series) == 0:
+                    continue
+                q1 = float(series.quantile(0.25))
+                median = float(series.median())
+                q3 = float(series.quantile(0.75))
+                iqr = q3 - q1
+                lower_whisker = float(series[series >= q1 - 1.5 * iqr].min()) if len(series) else float(series.min())
+                upper_whisker = float(series[series <= q3 + 1.5 * iqr].max()) if len(series) else float(series.max())
+                min_val = lower_whisker
+                max_val = upper_whisker
+                
+                categories.append(str(cat_name))
+                boxplot_data.append([min_val, q1, median, q3, max_val])
+
+            options = _base_options(f"Grouped Box Plot — {num_col} by {cat_col}", "boxplot")
+            options["xAxis"] = {"categories": categories, "title": {"text": cat_col}}
+            options["yAxis"] = {"title": {"text": num_col}}
+            options["legend"] = {"enabled": False}
+            options["series"] = [{"name": num_col, "data": boxplot_data}]
+            return options
+
+def generate_time_series_plot(df: pd.DataFrame, date_col: str, value_col: str) -> dict:
+    _require_column(df, date_col)
+    _require_column(df, value_col)
+
+    plot_df = df[[date_col, value_col]].copy()
+    plot_df[date_col] = pd.to_datetime(plot_df[date_col], errors="coerce")
+    plot_df[value_col] = pd.to_numeric(plot_df[value_col], errors="coerce")
+    plot_df = plot_df.dropna()
+
+    if plot_df.empty:
+        raise ValueError(f"No valid time-series data after parsing {date_col} and {value_col}.")
+
+    plot_df = plot_df.sort_values(by=date_col)
+
+    points = [
+        [int(row[date_col].timestamp() * 1000), float(row[value_col])]
+        for _, row in plot_df.iterrows()
+    ]
+
+    options = _base_options(f"Time Series — {value_col} over {date_col}", "line")
+    options["xAxis"] = {
+        "type": "datetime",
+        "title": {"text": date_col}
+    }
+    options["yAxis"] = {
+        "title": {"text": value_col}
+    }
+    options["tooltip"] = {
+        "xDateFormat": "%Y-%m-%d %H:%M:%S",
+        "pointFormat": f"{value_col}: <b>{{point.y}}</b>"
+    }
+    options["series"] = [
+        {
+            "name": value_col,
+            "data": points,
+            "marker": {"enabled": False}
+        }
+    ]
+    return options
