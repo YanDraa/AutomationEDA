@@ -13,9 +13,11 @@ import {
   Loader2,
   Upload,
   UploadCloud,
+  Database,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -77,27 +79,38 @@ export default function Page() {
   const [fileSize, setFileSize] = useState<string | null>(null);
   const [uploadHistory, setUploadHistory] = useState<HistoryEntry[]>([]);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [activeFileName, setActiveFileName] = useState<string | null>(null);
 
   const accepted = useMemo(() => ACCEPTED_EXTENSIONS.join(","), []);
 
-  // ── Fetch upload history on mount ──────────────────────────────────────────
+  // ── Fetch upload history and active dataset on mount ──────────────────────────
 
   useEffect(() => {
-    async function fetchHistory() {
+    async function fetchData() {
       try {
-        const res = await fetch(`${API_BASE}/api/data/history`, {
+        // Fetch history
+        const historyRes = await fetch(`${API_BASE}/api/data/history`, {
           credentials: "include",
         });
-        const data = await res.json();
-        if (data.status === "success") {
-          // Show newest first
-          setUploadHistory([...data.history].reverse());
+        const historyData = await historyRes.json();
+        if (historyData.status === "success") {
+          setUploadHistory([...historyData.history].reverse());
+        }
+
+        // Fetch active dataset
+        const activeRes = await fetch(`${API_BASE}/api/data/me`, {
+          credentials: "include",
+        });
+        const activeData = await activeRes.json();
+        if (activeData.has_raw_data && activeData.metadata) {
+          setActiveFileName(activeData.metadata.fileName ?? null);
         }
       } catch {
         // Non-critical
       }
     }
-    fetchHistory();
+    fetchData();
   }, []);
 
   // ── Upload handler: POST to /api/data/analyze → redirect on success ──────────
@@ -183,7 +196,40 @@ export default function Page() {
     [setDataset, router],
   );
 
-  // ── Restore handler ────────────────────────────────────────────────────────
+  // ── Delete handler ─────────────────────────────────────────────────────────
+
+  const handleDelete = useCallback(
+    async (fileName: string) => {
+      setIsDeleting(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/data/history`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ fileName }),
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          toast.success(`Deleted "${fileName}" from history`);
+          // Refresh history list
+          const historyRes = await fetch(`${API_BASE}/api/data/history`, {
+            credentials: "include",
+          });
+          const historyData = await historyRes.json();
+          if (historyData.status === "success") {
+            setUploadHistory([...historyData.history].reverse());
+          }
+        } else {
+          toast.error(data.detail ?? "Failed to delete dataset");
+        }
+      } catch {
+        toast.error("Failed to delete dataset. Check your connection.");
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [],
+  );
 
   const handleRestore = useCallback(
     async (fileName: string) => {
@@ -197,8 +243,28 @@ export default function Page() {
         });
         const data = await res.json();
         if (data.status === "success") {
-          toast.success(`Restored "${fileName}" successfully`);
-          router.refresh();
+          // Update dataset context with restored dataset info
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, "0");
+          const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const month = monthNames[now.getMonth()];
+          const year = now.getFullYear();
+          const hours = String(now.getHours()).padStart(2, "0");
+          const minutes = String(now.getMinutes()).padStart(2, "0");
+          
+          setDataset({
+            fileName: data.fileName,
+            rows: Number(data.rows ?? 0),
+            columns: Number(data.columns ?? 0),
+            fileSize: "-",
+            uploadTime: `${day} ${month} ${year} ${hours}:${minutes}`,
+          });
+          
+          setActiveFileName(fileName);
+          toast.success(`Switched to "${fileName}"`);
+          
+          // Redirect to data-preview to see the restored dataset
+          router.push("/dashboard/data-preview");
         } else {
           toast.error(data.detail ?? "Failed to restore dataset");
         }
@@ -208,7 +274,7 @@ export default function Page() {
         setIsRestoring(false);
       }
     },
-    [router],
+    [setDataset, router],
   );
 
   // ── Drag & drop handlers ────────────────────────────────────────────────────
@@ -275,6 +341,13 @@ export default function Page() {
               <CardDescription>
                 Drag &amp; drop a file or click the area below to select from your device.
               </CardDescription>
+              {activeFileName && (
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                  <Database className="size-4 text-primary" />
+                  <span className="text-muted-foreground text-xs">Currently using:</span>
+                  <Badge variant="secondary" className="text-xs">{activeFileName}</Badge>
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="flex flex-col gap-4">
@@ -396,8 +469,11 @@ export default function Page() {
       {uploadHistory.length > 0 && (
         <UploadHistory
           history={uploadHistory}
+          {...(activeFileName && { activeFileName })}
           onRestore={handleRestore}
+          onDelete={handleDelete}
           isRestoring={isRestoring}
+          isDeleting={isDeleting}
         />
       )}
     </div>

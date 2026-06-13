@@ -1698,6 +1698,10 @@ class RestoreRequest(BaseModel):
     fileName: str
 
 
+class DeleteRequest(BaseModel):
+    fileName: str
+
+
 @app.post("/api/data/restore")
 async def restore_dataset(
     req: RestoreRequest,
@@ -1740,6 +1744,52 @@ async def restore_dataset(
         "fileName": entry["fileName"],
         "rows": entry["rows"],
         "columns": entry["columns"],
+    }
+
+
+@app.delete("/api/data/history")
+async def delete_from_history(
+    req: DeleteRequest,
+    user_id: str = Depends(require_user_id),
+) -> Dict[str, Any]:
+    """Delete a dataset from upload history and remove its backup file."""
+    paths = get_user_paths(user_id)
+    history_file = paths["raw_pkl"].parent / "upload_history.json"
+
+    if not history_file.exists():
+        raise HTTPException(status_code=404, detail="No upload history found.")
+
+    with history_file.open("r", encoding="utf-8") as f:
+        history = json.load(f)
+
+    entry = next((h for h in history if h["fileName"] == req.fileName), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Dataset '{req.fileName}' not found in history.")
+
+    # Check if trying to delete active dataset
+    active_meta = {}
+    if paths["active_meta"].exists():
+        with paths["active_meta"].open("r", encoding="utf-8") as f:
+            active_meta = json.load(f)
+    
+    if active_meta.get("fileName") == req.fileName:
+        raise HTTPException(status_code=400, detail="Cannot delete the currently active dataset. Please upload or restore a different dataset first.")
+
+    # Remove from history
+    history = [h for h in history if h["fileName"] != req.fileName]
+    with history_file.open("w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    # Remove backup files
+    safe_name = os.path.splitext(req.fileName)[0].replace(" ", "_")
+    user_dir = paths["raw_pkl"].parent
+    backup_files = list(user_dir.glob(f"data_raw_{safe_name}_*.pkl"))
+    for backup_file in backup_files:
+        backup_file.unlink(missing_ok=True)
+
+    return {
+        "status": "success",
+        "message": f"Deleted '{req.fileName}' from history",
     }
 
 
