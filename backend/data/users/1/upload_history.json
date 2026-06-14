@@ -12,5 +12,12 @@
     "rows": 1826,
     "columns": 6,
     "fileSize": 90204
+  },
+  {
+    "fileName": "hasil_gabungan.csv",
+    "uploadedAt": "2026-06-14T12:10:54.867595+00:00",
+    "rows": 9130,
+    "columns": 6,
+    "fileSize": 414032
   }
 ]

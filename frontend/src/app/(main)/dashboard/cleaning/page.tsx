@@ -58,11 +58,12 @@ const MISSING_OPTIONS: { value: MissingAction; label: string; desc: string; icon
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function qualityScore(totalCells: number, missing: number, duplicates: number): number {
-  if (totalCells === 0) return 100;
-  const missingP = (missing / totalCells) * 60;
-  const dupP = (duplicates / totalCells) * 30;
-  return Math.max(0, Math.round(100 - missingP - dupP));
+function qualityScore(totalRows: number, totalColumns: number, missingCells: number, duplicateRows: number): number {
+  if (totalRows <= 0 || totalColumns <= 0) return 100;
+  const totalCells = totalRows * totalColumns;
+  const missingPenalty = (missingCells / totalCells) * 70;
+  const duplicatePenalty = (duplicateRows / totalRows) * 30;
+  return Math.max(0, Math.min(100, Math.round(100 - missingPenalty - duplicatePenalty)));
 }
 
 function qualityInfo(score: number) {
@@ -160,7 +161,7 @@ export default function Page() {
   const [missingCells, setMissingCells] = useState(0);
   const [columnsDetail, setColumnsDetail] = useState<ColumnDetail[]>([]);
 
-  const score = useMemo(() => qualityScore(totalRows * totalCols, missingCells, duplicatedRows), [totalRows, totalCols, missingCells, duplicatedRows]);
+  const score = useMemo(() => qualityScore(totalRows, totalCols, missingCells, duplicatedRows), [totalRows, totalCols, missingCells, duplicatedRows]);
   const qInfo = useMemo(() => qualityInfo(score), [score]);
   const hasIssues = duplicatedRows > 0 || missingCells > 0;
   const issueCount = (duplicatedRows > 0 ? 1 : 0) + (missingCells > 0 ? 1 : 0);
