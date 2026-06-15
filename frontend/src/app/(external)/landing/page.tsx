@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -84,13 +85,13 @@ function Linkedin({ className }: { className?: string }) {
  * ──────────────────────────────────────────────────────────────────────── */
 
 const TEAM_MEMBERS = [
-  { id: 1, name: "Fityanandra Athar Adyaksa", nim: "52250059", role: "Data Scientist", linkedin: "https://www.linkedin.com/in/fityanandra", github: "https://github.com/YanDraa", initials: "FA" },
-  { id: 2, name: "Kayla Aprilia", nim: "52250057", role: "ML Engineer", linkedin: "https://id.linkedin.com/in/kayla-aprilia-73182538a", github: "https://github.com/kayieeela", initials: "KA" },
-  { id: 3, name: "Morris Alexander Pangaribuan", nim: "52250058", role: "Backend Developer", linkedin: "https://www.linkedin.com/in/morris-alexander-pangaribuan-40883a38a", github: "https://github.com/morrisalexanderpangaribuan-sketch", initials: "MP" },
-  { id: 4, name: "Octavia Maia Rego", nim: "52250077", role: "Frontend Developer", linkedin: "https://www.linkedin.com/in/octavia-maia-r-2b064538a", github: "https://github.com/octaviamaia031-wq", initials: "OM" },
-  { id: 5, name: "Naifah Edria Arta", nim: "52250056", role: "Data Analyst", linkedin: "https://www.linkedin.com/in/naifah-edria-83460238a/", github: "https://github.com/naifahdria-hue", initials: "NA" },
-  { id: 6, name: "Zidhan Alfarezi Afdi", nim: "52250049", role: "UI/UX Designer", linkedin: "https://www.linkedin.com/in/zidhan-alfarezi-afdi-047b92344", github: "https://github.com/zidhan-08", initials: "ZA" },
-  { id: 7, name: "Syafif Azmi Lontoh", nim: "52250060", role: "UI/UX Designer", linkedin: "https://www.linkedin.com/in/syafif-azmi-lontoh-b2589a38b/", github: "https://github.com/Syafifazmi", initials: "SL" },
+  { id: 1, name: "Fityanandra Athar Adyaksa", nim: "52250059", role: "Software Engineer", linkedin: "https://www.linkedin.com/in/fityanandra", github: "https://github.com/YanDraa", githubUser: "YanDraa", initials: "FA" },
+  { id: 2, name: "Kayla Aprilia", nim: "52250057", role: "ML Engineer", linkedin: "https://id.linkedin.com/in/kayla-aprilia-73182538a", github: "https://github.com/kayieeela", githubUser: "kayieeela", initials: "KA" },
+  { id: 3, name: "Morris Alexander Pangaribuan", nim: "52250058", role: "Backend Developer", linkedin: "https://www.linkedin.com/in/morris-alexander-pangaribuan-40883a38a", github: "https://github.com/morrisalexanderpangaribuan-sketch", githubUser: "morrisalexanderpangaribuan-sketch", initials: "MP" },
+  { id: 4, name: "Octavia Maia Rego", nim: "52250077", role: "Frontend Developer", linkedin: "https://www.linkedin.com/in/octavia-maia-r-2b064538a", github: "https://github.com/octaviamaia031-wq", githubUser: "octaviamaia031-wq", initials: "OM" },
+  { id: 5, name: "Naifah Edria Arta", nim: "52250056", role: "Data Analyst", linkedin: "https://www.linkedin.com/in/naifah-edria-83460238a/", github: "https://github.com/naifahdria-hue", githubUser: "naifahdria-hue", initials: "NA" },
+  { id: 6, name: "Zidhan Alfarezi Afdi", nim: "52250049", role: "UI/UX Designer", linkedin: "https://www.linkedin.com/in/zidhan-alfarezi-afdi-047b92344", github: "https://github.com/zidhan-08", githubUser: "zidhan-08", initials: "ZA" },
+  { id: 7, name: "Syafif Azmi Lontoh", nim: "52250060", role: "Data Scientist", linkedin: "https://www.linkedin.com/in/syafif-azmi-lontoh-b2589a38b/", github: "https://github.com/Syafifazmi", githubUser: "Syafifazmi", initials: "SL" },
 ];
 
 const STATS = [
@@ -1139,88 +1140,138 @@ export default function LandingPage() {
       </section>
 
       {/* ──────────── TEAM ──────────── */}
-      <section id="team" className="relative border-t border-border py-24 md:py-32" data-testid="team-section">
+      <section id="team" className="relative border-t border-border py-24 md:py-32 overflow-hidden" data-testid="team-section">
+        {/* Background decorative blobs */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+        </div>
+
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
-            <div className="mb-14 max-w-2xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-                <Sparkle className="h-3 w-3 text-primary" /> Dikerjakan oleh
-              </div>
-              <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
-                Tim Pengembang
+            <div className="mb-16 text-center">
+              <motion.div
+                className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs text-primary"
+                whileHover={{ scale: 1.05 }}
+              >
+                <Sparkle className="h-3 w-3" /> Dikerjakan oleh
+              </motion.div>
+              <h2 className="text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
+                <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
+                  Tim Pengembang
+                </span>
               </h2>
-              <p className="mt-4 text-base text-muted-foreground">
+              <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
                 Tujuh mahasiswa yang berkolaborasi membangun AutomationEDA sebagai proyek akhir semester
                 mata kuliah Pemrograman Data Sains.
               </p>
+              {/* Decorative line */}
+              <div className="mx-auto mt-6 h-px w-24 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
             </div>
           </Reveal>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {TEAM_MEMBERS.map((m, i) => (
-              <Reveal key={m.id} delay={i * 0.04}>
+              <Reveal key={m.id} delay={i * 0.05}>
                 <motion.div
-                  whileHover={{ y: -3 }}
-                  className="group relative overflow-hidden rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-md transition-colors hover:border-primary/40"
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="group relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 via-card/40 to-card/10 p-6 shadow-lg shadow-black/5 backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5"
                   data-testid={`team-card-${m.initials.toLowerCase()}`}
                 >
-                  <div
+                  {/* Hover glow overlay */}
+                  <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+                    className="pointer-events-none absolute -inset-1 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                     style={{
                       background:
-                        "radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 60%)",
+                        "radial-gradient(120px circle at 50% 0%, color-mix(in oklch, var(--primary) 25%, transparent), transparent 70%)",
                     }}
                   />
-                  <div className="relative flex items-center gap-3">
-                    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-background/80 font-mono text-sm font-semibold">
-                      {m.initials}
+                  {/* Shine effect on hover */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                  />
+
+                  {/* Avatar section */}
+                  <div className="relative flex flex-col items-center gap-4">
+                    {/* Avatar with animated ring */}
+                    <div className="relative h-20 w-20 shrink-0">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent blur-md opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                      <Image
+                        src={`https://github.com/${m.githubUser}.png`}
+                        alt={m.name}
+                        width={80}
+                        height={80}
+                        className="relative rounded-full border-2 border-border object-cover transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105"
+                      />
+                      {/* Animated conic border */}
                       <motion.div
                         aria-hidden
-                        className="absolute inset-0 rounded-full"
+                        className="absolute -inset-[2px] rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-60"
                         style={{
                           background:
-                            "conic-gradient(from 0deg, color-mix(in oklch, var(--primary) 50%, transparent), transparent 40%, transparent 60%, color-mix(in oklch, var(--primary) 50%, transparent))",
-                          padding: "1px",
-                          opacity: 0.5,
-                          maskImage: "linear-gradient(black, black) content-box, linear-gradient(black, black)",
-                          WebkitMaskImage:
-                            "linear-gradient(black, black) content-box, linear-gradient(black, black)",
-                          maskComposite: "exclude",
-                          WebkitMaskComposite: "xor",
+                            "conic-gradient(from 0deg, color-mix(in oklch, var(--primary) 60%, transparent), transparent 40%, transparent 60%, color-mix(in oklch, var(--primary) 60%, transparent))",
+                          WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px))",
+                          mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px))",
                         }}
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                       />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{m.name}</div>
-                      <div className="truncate text-xs text-muted-foreground">{m.role}</div>
+
+                    {/* Info */}
+                    <div className="text-center">
+                      <div className="font-semibold text-sm transition-colors group-hover:text-primary">
+                        {m.name}
+                      </div>
+                      <motion.div
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground backdrop-blur-sm transition-all duration-300 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        <span className="h-1 w-1 rounded-full bg-current opacity-60" />
+                        {m.role}
+                      </motion.div>
+                      <div className="mt-2 font-mono text-[10px] text-muted-foreground/50">
+                        {m.nim}
+                      </div>
                     </div>
                   </div>
-                  <div className="relative mt-4 flex items-center gap-2">
-                    <Link
-                      href={m.linkedin}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                      aria-label={`LinkedIn ${m.name}`}
-                      data-testid={`team-linkedin-${m.initials.toLowerCase()}`}
-                    >
-                      <Linkedin className="h-3.5 w-3.5" />
-                    </Link>
-                    <Link
-                      href={m.github}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                      aria-label={`GitHub ${m.name}`}
-                      data-testid={`team-github-${m.initials.toLowerCase()}`}
-                    >
-                      <Github className="h-3.5 w-3.5" />
-                    </Link>
-                    <span className="ml-auto font-mono text-[10px] text-muted-foreground">{m.nim}</span>
+
+                  {/* Social links */}
+                  <div className="relative mt-5 flex items-center justify-center gap-2.5">
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                      <Link
+                        href={m.linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-background/40 text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-primary/10"
+                        aria-label={`LinkedIn ${m.name}`}
+                        data-testid={`team-linkedin-${m.initials.toLowerCase()}`}
+                      >
+                        <Linkedin className="h-3.5 w-3.5" />
+                      </Link>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                      <Link
+                        href={m.github}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-background/40 text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-primary/10"
+                        aria-label={`GitHub ${m.name}`}
+                        data-testid={`team-github-${m.initials.toLowerCase()}`}
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                      </Link>
+                    </motion.div>
                   </div>
+
+                  {/* Card bottom accent line */}
+                  <div
+                    aria-hidden
+                    className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/40 to-transparent transition-all duration-500 group-hover:w-3/4"
+                  />
                 </motion.div>
               </Reveal>
             ))}
