@@ -26,11 +26,16 @@ import { postVisualizationOptions } from "@/lib/visualization-client";
 const NUMERICAL_CHART_TYPES = [
   { value: "histogram", label: "Histogram" },
   { value: "boxplot", label: "Box Plot" },
+  { value: "density", label: "Density Plot" },
+  { value: "qq-plot", label: "QQ Plot" },
+  { value: "violin", label: "Violin Plot" },
 ] as const;
 
 const CATEGORICAL_CHART_TYPES = [
   { value: "barchart", label: "Bar Chart" },
   { value: "piechart", label: "Pie Chart" },
+  { value: "countplot", label: "Count Plot" },
+  { value: "pareto", label: "Pareto Chart" },
 ] as const;
 
 function UnivariatePanel({
@@ -117,8 +122,8 @@ function UnivariatePanel({
         </CardTitle>
         <CardDescription>
           {mode === "numerical"
-            ? "Histogram dan Box Plot untuk satu variabel numerik."
-            : "Bar Chart dan Pie Chart untuk satu variabel kategorikal."}
+            ? "Histogram, Box Plot, Density Plot, QQ Plot, dan Violin Plot untuk satu variabel numerik."
+            : "Bar Chart, Pie Chart, Count Plot, dan Pareto Chart untuk satu variabel kategorikal."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">

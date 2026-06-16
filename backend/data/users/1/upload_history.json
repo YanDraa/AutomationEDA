@@ -19,5 +19,19 @@
     "rows": 9130,
     "columns": 6,
     "fileSize": 414032
+  },
+  {
+    "fileName": "employee_raw_dataset.csv",
+    "uploadedAt": "2026-06-16T06:31:57.726446+00:00",
+    "rows": 510,
+    "columns": 13,
+    "fileSize": 35326
+  },
+  {
+    "fileName": "Dataset_Kesehatan_15000_Data.xlsx",
+    "uploadedAt": "2026-06-16T09:16:04.351353+00:00",
+    "rows": 15000,
+    "columns": 13,
+    "fileSize": 833756
   }
 ]

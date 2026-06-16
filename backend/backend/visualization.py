@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
+from scipy import stats
 import pandas as pd
+from scipy import stats
 
 from backend.categorical_analysis import _manual_pearson
 
@@ -91,6 +93,51 @@ def generate_numerical_plot(df: pd.DataFrame, col: str, chart_type: str) -> dict
         ]
         return options
 
+    # New chart types
+    if chart_type == "density":
+        # Kernel Density Estimate using Gaussian kernel
+        kde = stats.gaussian_kde(values)
+        x_grid = np.linspace(values.min(), values.max(), 200)
+        y_vals = kde.evaluate(x_grid)
+        options = _base_options(f"Density Plot — {col}", "area")
+        options["xAxis"] = {"title": {"text": col}}
+        options["yAxis"] = {"title": {"text": "Density"}}
+        options["tooltip"] = {
+            "pointFormat": "Density: <b>{point.y:.4f}</b>",
+        }
+        options["series"] = [{"name": col, "data": list(zip(x_grid.tolist(), y_vals.tolist()))}]
+        return options
+
+    if chart_type == "qq-plot":
+        # Generate Q-Q plot data against a normal distribution
+        (osm, osr), (slope, intercept, r) = stats.probplot(values, dist="norm")
+        # osm: theoretical quantiles, osr: ordered sample values
+        options = _base_options(f"QQ Plot — {col}", "scatter")
+        options["xAxis"] = {"title": {"text": "Theoretical Quantiles"}}
+        options["yAxis"] = {"title": {"text": "Ordered Values"}}
+        options["tooltip"] = {
+            "pointFormat": "Theoretical: <b>{point.x:.4f}</b><br/>Sample: <b>{point.y:.4f}</b>",
+        }
+        options["series"] = [{"name": "QQ", "data": list(zip(osm.tolist(), osr.tolist()))}]
+        return options
+
+    if chart_type == "violin":
+        # Approximate violin plot using kernel density mirrored
+        kde = stats.gaussian_kde(values)
+        x_grid = np.linspace(values.min(), values.max(), 200)
+        y_vals = kde.evaluate(x_grid)
+        # Create mirrored data for violin shape
+        data = []
+        for x, y in zip(x_grid, y_vals):
+            data.append([x, y])
+            data.append([x, -y])
+        options = _base_options(f"Violin Plot — {col}", "area")
+        options["xAxis"] = {"title": {"text": col}}
+        options["yAxis"] = {"title": {"text": "Density"}, "opposite": True}
+        options["plotOptions"] = {"area": {"fillOpacity": 0.5}}
+        options["series"] = [{"name": col, "data": data}]
+        return options
+
     raise ValueError(
         f"Unsupported chart_type '{chart_type}'. Use: histogram, boxplot."
     )
@@ -105,6 +152,24 @@ def generate_categorical_plot(df: pd.DataFrame, col: str, chart_type: str) -> di
 
     if chart_type in ("barchart", "bar", "bar chart"):
         options = _base_options(f"Bar Chart — {col}", "column")
+        options["xAxis"] = {
+            "categories": labels,
+            "title": {"text": col},
+            "crosshair": True,
+        }
+        options["yAxis"] = {"title": {"text": "Count"}}
+        options["plotOptions"] = {
+            "column": {
+                "borderRadius": 3,
+                "colorByPoint": True,
+            }
+        }
+        options["series"] = [{"name": "Count", "data": values}]
+        return options
+
+    if chart_type in ("countplot", "count plot"):
+        # Count Plot is essentially the same as Bar Chart for categorical data
+        options = _base_options(f"Count Plot — {col}", "column")
         options["xAxis"] = {
             "categories": labels,
             "title": {"text": col},
@@ -135,6 +200,36 @@ def generate_categorical_plot(df: pd.DataFrame, col: str, chart_type: str) -> di
         options["series"] = [{"name": col, "colorByPoint": True, "data": pie_data}]
         return options
 
+    if chart_type == "pareto":
+        # Pareto chart: bar chart of frequencies with cumulative line
+        total = sum(values)
+        cumulative = []
+        cum_sum = 0
+        for v in values:
+            cum_sum += v
+            cumulative.append(round(cum_sum / total * 100, 2))
+        options = _base_options(f"Pareto Chart — {col}", "column")
+        options["xAxis"] = {
+            "categories": labels,
+            "title": {"text": col},
+            "crosshair": True,
+        }
+        options["yAxis"] = [{"title": {"text": "Count"}}, {"opposite": True, "title": {"text": "% Cumulative"}, "max": 100}]
+        options["plotOptions"] = {
+            "column": {
+                "borderRadius": 3,
+                "colorByPoint": True,
+            },
+            "spline": {
+                "marker": {"enabled": True},
+                "tooltip": {"valueSuffix": "%"},
+            }
+        }
+        options["series"] = [
+            {"type": "column", "name": "Count", "data": values},
+            {"type": "spline", "name": "Cumulative %", "yAxis": 1, "data": cumulative},
+        ]
+        return options
     raise ValueError(
         f"Unsupported chart_type '{chart_type}'. Use: barchart, piechart."
     )
@@ -222,6 +317,43 @@ def generate_bivariate_plot(
             for _, row in plot_df.iterrows()
         ]
 
+        if chart_type == "regression":
+            # Linear regression line over scatter data
+            # Prepare numeric arrays
+            x_vals = plot_df[x_col].to_numpy(dtype=float)
+            y_vals = plot_df[y_col].to_numpy(dtype=float)
+            # Compute linear regression coefficients
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x_vals, y_vals)
+            # Generate regression line points (using min and max of x)
+            x_min, x_max = x_vals.min(), x_vals.max()
+            reg_line = [[x_min, slope * x_min + intercept], [x_max, slope * x_max + intercept]]
+            # Scatter points series
+            scatter_series = {
+                "type": "scatter",
+                "name": f"{y_col} vs {x_col}",
+                "data": points,
+                "marker": {"radius": 4, "symbol": "circle"},
+            }
+            # Regression line series
+            line_series = {
+                "type": "line",
+                "name": "Regression Line",
+                "data": reg_line,
+                "marker": {"enabled": False},
+                "dashStyle": "ShortDot",
+                "color": "#FF0000",
+                "tooltip": {"pointFormat": "Regression: y = {point.y:.2f}"},
+            }
+            options = _base_options(f"Regression Plot — {y_col} vs {x_col}", "scatter")
+            options["xAxis"] = {"title": {"text": x_col}}
+            options["yAxis"] = {"title": {"text": y_col}}
+            options["tooltip"] = {
+                "headerFormat": "<b>{series.name}</b><br/>",
+                "pointFormat": f"{x_col}: <b>{{point.x}}</b><br/>{y_col}: <b>{{point.y}}</b>",
+            }
+            options["series"] = [scatter_series, line_series]
+            return options
+
         options = _base_options(f"Scatter Plot — {y_col} vs {x_col}", "scatter")
         options["xAxis"] = {"title": {"text": x_col}}
         options["yAxis"] = {"title": {"text": y_col}}
@@ -241,31 +373,107 @@ def generate_bivariate_plot(
     elif not is_x_num and not is_y_num:
         plot_df = df[[x_col, y_col]].copy().dropna()
         if plot_df.empty:
-            raise ValueError("No valid overlapping rows for stacked bar chart.")
+            raise ValueError("No valid overlapping rows for categorical analysis.")
         
         cross = pd.crosstab(plot_df[x_col], plot_df[y_col])
         categories = cross.index.astype(str).tolist()
-        series_data = []
-        for col in cross.columns:
-            series_data.append({
-                "name": str(col),
-                "data": cross[col].tolist()
-            })
-
-        options = _base_options(f"Stacked Bar Chart — {x_col} by {y_col}", "column")
-        options["xAxis"] = {"categories": categories, "title": {"text": x_col}}
-        options["yAxis"] = {"title": {"text": "Count"}}
-        options["plotOptions"] = {
-            "column": {
-                "stacking": "normal"
+        
+        if chart_type in ("heatmap-crosstab", "crosstab-heatmap", "crosstab"):
+            x_categories = cross.index.astype(str).tolist()
+            y_categories = cross.columns.astype(str).tolist()
+            
+            heatmap_data = []
+            for y_idx, col_name in enumerate(cross.columns):
+                for x_idx, row_name in enumerate(cross.index):
+                    val = int(cross.loc[row_name, col_name])
+                    heatmap_data.append([float(x_idx), float(y_idx), float(val)])
+            
+            options = _base_options(f"Crosstab Heatmap — {x_col} vs {y_col}", "heatmap")
+            options["xAxis"] = {"categories": x_categories, "title": {"text": x_col}}
+            options["yAxis"] = {
+                "categories": y_categories,
+                "title": {"text": y_col},
+                "reversed": True,
             }
-        }
-        options["series"] = series_data
-        return options
+            # Find min/max values for colorAxis
+            all_vals = cross.values.flatten()
+            min_val = int(all_vals.min()) if len(all_vals) else 0
+            max_val = int(all_vals.max()) if len(all_vals) else 1
+            options["colorAxis"] = {
+                "min": min_val,
+                "max": max_val,
+                "minColor": "#FFFFFF",
+                "maxColor": "#7cb5ec",
+            }
+            options["legend"] = {
+                "align": "right",
+                "layout": "vertical",
+                "margin": 0,
+                "verticalAlign": "top",
+                "y": 25,
+                "symbolHeight": 280,
+            }
+            options["series"] = [
+                {
+                    "name": "Count",
+                    "borderWidth": 1,
+                    "borderColor": "#e6e6e6",
+                    "data": heatmap_data,
+                    "dataLabels": {
+                        "enabled": True,
+                        "color": "#000000",
+                        "format": "{point.value}",
+                    },
+                }
+            ]
+            return options
+            
+        elif chart_type in ("grouped-bar", "grouped_bar", "grouped"):
+            series_data = []
+            for col in cross.columns:
+                series_data.append({
+                    "name": str(col),
+                    "data": cross[col].tolist()
+                })
+            
+            options = _base_options(f"Grouped Bar Chart — {x_col} by {y_col}", "column")
+            options["xAxis"] = {"categories": categories, "title": {"text": x_col}}
+            options["yAxis"] = {"title": {"text": "Count"}}
+            options["plotOptions"] = {
+                "column": {
+                    "stacking": None
+                }
+            }
+            options["series"] = series_data
+            return options
+            
+        else:
+            # Default to Stacked Bar Chart
+            series_data = []
+            for col in cross.columns:
+                series_data.append({
+                    "name": str(col),
+                    "data": cross[col].tolist()
+                })
+            
+            options = _base_options(f"Stacked Bar Chart — {x_col} by {y_col}", "column")
+            options["xAxis"] = {"categories": categories, "title": {"text": x_col}}
+            options["yAxis"] = {"title": {"text": "Count"}}
+            options["plotOptions"] = {
+                "column": {
+                    "stacking": "normal"
+                }
+            }
+            options["series"] = series_data
+            return options
 
     else:
-        cat_col = x_col if not is_x_num else y_col
-        num_col = y_col if is_x_num else x_col
+        if is_x_num:
+            num_col = x_col
+            cat_col = y_col
+        else:
+            num_col = y_col
+            cat_col = x_col
         
         plot_df = df[[cat_col, num_col]].copy()
         plot_df[num_col] = pd.to_numeric(plot_df[num_col], errors="coerce")
