@@ -12,3 +12,4 @@ fpdf2==2.8.3
 PyJWT==2.9.0
 reportlab
 jinja2
+groq

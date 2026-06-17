@@ -239,8 +239,32 @@ def generate_bivariate_plot(
     df: pd.DataFrame,
     x_col: str,
     y_col: str,
-    chart_type: str,
+    chart_type: str | None = None,
+    size_col: str | None = None,
 ) -> dict:
+    # Ensure column existence
+    _require_column(df, x_col)
+    _require_column(df, y_col)
+
+    # Determine data types
+    is_x_num = pd.api.types.is_numeric_dtype(df[x_col])
+    is_y_num = pd.api.types.is_numeric_dtype(df[y_col])
+
+    # Auto-select chart_type if not provided
+    if not chart_type:
+        # Determine if size column is numeric for bubble chart
+        is_size_num = False
+        if size_col:
+            is_size_num = pd.api.types.is_numeric_dtype(df[size_col])
+        if is_x_num and is_y_num and is_size_num:
+            chart_type = "bubble"
+        elif is_x_num and is_y_num:
+            chart_type = "scatter"
+        elif not is_x_num and not is_y_num:
+            chart_type = "heatmap-crosstab"
+        else:
+            chart_type = "bar-aggregation"
+
     chart_type = chart_type.lower().strip()
 
     if chart_type == "heatmap":
@@ -305,12 +329,7 @@ def generate_bivariate_plot(
     is_y_num = pd.api.types.is_numeric_dtype(df[y_col])
 
     if is_x_num and is_y_num:
-        plot_df = df[[x_col, y_col]].copy()
-        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
-        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        plot_df = plot_df.dropna()
-        if plot_df.empty:
-            raise ValueError("No overlapping numeric rows for scatter plot.")
+        
 
         points = [
             [float(row[x_col]), float(row[y_col])]
@@ -354,6 +373,33 @@ def generate_bivariate_plot(
             options["series"] = [scatter_series, line_series]
             return options
 
+        # Bubble chart handling
+        if chart_type == "bubble":
+            if not size_col:
+                raise ValueError("Bubble chart requires 'size_col' parameter.")
+            _require_column(df, size_col)
+            if not pd.api.types.is_numeric_dtype(df[size_col]):
+                raise ValueError(f"Size column '{size_col}' must be numeric.")
+            # Ensure size column is present in plot_df
+            if size_col not in plot_df.columns:
+                # Add size column to plot_df
+                plot_df[size_col] = pd.to_numeric(df[size_col], errors="coerce")
+                plot_df = plot_df.dropna()
+            points = [
+                [float(row[x_col]), float(row[y_col]), float(row[size_col])]
+                for _, row in plot_df.iterrows()
+            ]
+            options = _base_options(f"Bubble Plot — {y_col} vs {x_col}", "bubble")
+            options["xAxis"] = {"title": {"text": x_col}}
+            options["yAxis"] = {"title": {"text": y_col}}
+            options["tooltip"] = {
+                "headerFormat": "<b>{point.key}</b><br/>",
+                "pointFormat": f"{x_col}: <b>{{point.x}}</b><br/>{y_col}: <b>{{point.y}}</b><br/>{size_col}: <b>{{point.z}}</b>",
+            }
+            options["series"] = [{"type": "bubble", "name": f"{y_col} vs {x_col}", "data": points}]
+            return options
+
+        # Default scatter plot
         options = _base_options(f"Scatter Plot — {y_col} vs {x_col}", "scatter")
         options["xAxis"] = {"title": {"text": x_col}}
         options["yAxis"] = {"title": {"text": y_col}}
@@ -543,23 +589,67 @@ def generate_time_series_plot(df: pd.DataFrame, date_col: str, value_col: str) -
         for _, row in plot_df.iterrows()
     ]
 
+    # Initialize chart options
     options = _base_options(f"Time Series — {value_col} over {date_col}", "line")
-    options["xAxis"] = {
-        "type": "datetime",
-        "title": {"text": date_col}
-    }
-    options["yAxis"] = {
-        "title": {"text": value_col}
-    }
-    options["tooltip"] = {
-        "xDateFormat": "%Y-%m-%d %H:%M:%S",
-        "pointFormat": f"{value_col}: <b>{{point.y}}</b>"
-    }
-    options["series"] = [
-        {
-            "name": value_col,
-            "data": points,
-            "marker": {"enabled": False}
-        }
-    ]
+    options["xAxis"] = {"type": "datetime", "title": {"text": date_col}}
+    options["yAxis"] = {"title": {"text": value_col}}
+    options["series"] = [{
+        "name": value_col,
+        "type": "line",
+        "data": points,
+        "marker": {"enabled": True},
+    }]
+# Compute trend line using linear regression
+    if len(plot_df) >= 2:
+        # Convert timestamps to ordinal for regression
+        timestamps = plot_df[date_col].astype('int64') // 10**9  # seconds since epoch
+        values = plot_df[value_col].astype(float)
+        coeffs = np.polyfit(timestamps, values, 1)
+        trend_vals = np.polyval(coeffs, timestamps)
+        options["series"].append({
+            "name": f"Trend ({value_col})",
+            "type": "line",
+            "data": list(zip(plot_df[date_col].astype('int64') // 10**9 * 1000, trend_vals.astype(float))),
+            "marker": {"enabled": True},
+            "dashStyle": "ShortDash",
+            "color": "#FF0000",
+        })
+    # Moving average (window=5)
+    if len(plot_df) >= 5:
+        ma_series = plot_df[value_col].rolling(window=5).mean()
+        options["series"].append({
+            "name": f"Moving Avg ({value_col})",
+            "type": "line",
+            "data": list(zip(plot_df[date_col].astype('int64') // 10**9 * 1000, ma_series.fillna(method='bfill').astype(float))),
+            "marker": {"enabled": False},
+            "dashStyle": "Dot",
+            "color": "#00AA00",
+        })
+    # Rolling mean (window=10)
+    if len(plot_df) >= 10:
+        rm_series = plot_df[value_col].rolling(window=10).mean()
+        options["series"].append({
+            "name": f"Rolling Mean ({value_col})",
+            "type": "line",
+            "data": list(zip(plot_df[date_col].astype('int64') // 10**9 * 1000, rm_series.fillna(method='bfill').astype(float))),
+            "marker": {"enabled": False},
+            "dashStyle": "Dash",
+            "color": "#0000FF",
+        })
+    # Simple forecasting: extend last trend for next 10 points (daily frequency)
+    if len(plot_df) >= 2:
+        last_timestamp = plot_df[date_col].max()
+        freq = pd.infer_freq(plot_df[date_col]) or 'D'
+        future_dates = pd.date_range(start=last_timestamp, periods=11, freq=freq)
+        future_ts = future_dates.astype('int64') // 10**9 * 1000
+        # Use same linear coeffs for forecast
+        future_vals = np.polyval(coeffs, future_dates.astype('int64') // 10**9)
+        options["series"].append({
+            "name": f"Forecast ({value_col})",
+            "type": "line",
+            "data": list(zip(future_ts, future_vals.astype(float))),
+            "marker": {"enabled": False, "symbol": "circle"},
+            "dashStyle": "ShortDot",
+            "color": "#FF9900",
+        })
     return options

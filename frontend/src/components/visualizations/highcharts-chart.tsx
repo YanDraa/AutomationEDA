@@ -21,11 +21,8 @@ function loadChartLib(): Promise<ChartLib> {
       // Highcharts 12+: modules self-register on import (do not call as functions)
       await import("highcharts/highcharts-more");
       await import("highcharts/modules/heatmap");
-      const paretoModule = await import("highcharts/modules/pareto");
-      // Register the Pareto module with Highcharts (for versions requiring explicit registration)
-      if (typeof paretoModule.default === "function") {
-        paretoModule.default(Highcharts);
-      }
+      await import("highcharts/modules/pareto");
+      // No explicit registration needed for Highcharts 12+
       const { default: HighchartsReact } = await import("highcharts-react-official");
       return { Highcharts, HighchartsReact };
     })();
@@ -121,18 +118,6 @@ const themePresetOptions = {
       }
     }
   },
-  legend: {
-    itemStyle: {
-      color: "var(--foreground)",
-      fontFamily: "var(--font-sans)",
-    },
-    itemHoverStyle: {
-      color: "var(--primary)",
-    },
-    itemHiddenStyle: {
-      color: "var(--muted-foreground)",
-    }
-  },
   tooltip: {
     backgroundColor: "var(--card)",
     borderColor: "var(--border)",
@@ -159,6 +144,11 @@ const themePresetOptions = {
           textOutline: "none",
         }
       }
+    },
+    bubble: {
+      minSize: "10%",
+      maxSize: "20%",
+      sizeBy: "area",
     }
   }
 };
