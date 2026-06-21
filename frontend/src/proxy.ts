@@ -1,23 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const COOKIE_NAME = "eda_session_token";
-
 /**
  * Proxy runs before requests complete.
- * Protects /dashboard/* routes — redirects to landing if no session cookie.
+ * Auth is handled client-side because the session cookie is set on the
+ * HF Space backend domain (cross-origin) and cannot be read server-side
+ * on Vercel. All dashboard routes are allowed through.
  */
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Only protect dashboard routes
-  if (pathname.startsWith("/dashboard")) {
-    const token = request.cookies.get(COOKIE_NAME)?.value;
-
-    if (!token) {
-      return NextResponse.redirect(new URL("/landing", request.url));
-    }
-  }
-
   return NextResponse.next();
 }
 
