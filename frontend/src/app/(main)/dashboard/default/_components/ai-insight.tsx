@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
@@ -21,7 +21,7 @@ function MarkdownText({ text }: { text: string }) {
   return (
     <ul className="flex flex-col gap-1.5">
       {lines.map((line, i) => {
-        const clean = line.replace(/^[-•]\s*/, "");
+        const clean = line.replace(/^[-â€¢]\s*/, "");
         const parts = clean.split(/\*\*(.*?)\*\*/g);
         return (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
@@ -49,7 +49,7 @@ export function AiInsight() {
     if (!dataset) return;
     setLoading(true);
     setError(null);
-    fetch("http://localhost:8000/api/interpretation", { credentials: "include" })
+    fetch("https://yandraa-my-fastapi-backend.hf.space/api/interpretation", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => {
         if (d.status === "success" && d.result) setResult(d.result);
@@ -125,7 +125,7 @@ export function AiInsight() {
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {expanded === col.column ? "▲" : "▼"}
+                        {expanded === col.column ? "â–²" : "â–¼"}
                       </span>
                     </button>
                     {expanded === col.column && (

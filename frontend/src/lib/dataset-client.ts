@@ -1,4 +1,4 @@
-export type CurrentDatasetResponse = {
+﻿export type CurrentDatasetResponse = {
   status: "success";
   dataset: {
     fileName: string;
@@ -23,7 +23,7 @@ export type CurrentDatasetResponse = {
 
 
 export async function fetchCurrentDataset(): Promise<CurrentDatasetResponse | null> {
-  const res = await fetch("http://localhost:8000/api/current-dataset", {
+  const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", {
     method: "GET",
     headers: { "Accept": "application/json" },
     credentials: "include",
@@ -34,4 +34,5 @@ export async function fetchCurrentDataset(): Promise<CurrentDatasetResponse | nu
   if (data?.status !== "success") return null;
   return data;
 }
+
 

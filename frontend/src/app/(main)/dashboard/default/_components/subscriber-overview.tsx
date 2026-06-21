@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,7 @@ function GenericDataTable({ rows, columns }: {
                 {columns.map((col) => (
                   <TableCell key={col} className="px-3 py-2.5 text-sm whitespace-nowrap">
                     {row[col] === null || row[col] === undefined
-                      ? <span className="text-muted-foreground/50 italic text-xs">—</span>
+                      ? <span className="text-muted-foreground/50 italic text-xs">â€”</span>
                       : String(row[col])}
                   </TableCell>
                 ))}
@@ -67,7 +67,7 @@ export function SubscriberOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => setApiData(d))
       .catch(() => {});
@@ -100,10 +100,10 @@ export function SubscriberOverview() {
     <Card>
       <CardHeader>
         <CardTitle className="text-sm font-semibold leading-none">
-          Dataset Preview — {fileName}
+          Dataset Preview â€” {fileName}
         </CardTitle>
         <CardDescription className="text-xs">
-          {totalRows.toLocaleString()} total records · menampilkan 10 baris pertama · {previewColumns.length} kolom
+          {totalRows.toLocaleString()} total records Â· menampilkan 10 baris pertama Â· {previewColumns.length} kolom
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">

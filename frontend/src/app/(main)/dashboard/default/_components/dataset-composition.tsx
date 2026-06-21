@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -27,7 +27,7 @@ export function DatasetComposition() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});
@@ -56,7 +56,7 @@ export function DatasetComposition() {
       <CardHeader>
         <CardTitle className="text-sm font-semibold">Dataset Composition</CardTitle>
         <CardDescription className="text-xs">
-          Distribusi tipe kolom — {api.dataset?.fileName}
+          Distribusi tipe kolom â€” {api.dataset?.fileName}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,7 +94,7 @@ export function DatasetComposition() {
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* Center label — absolute di dalam wrapper relative */}
+            {/* Center label â€” absolute di dalam wrapper relative */}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl font-bold">{total}</span>
               <span className="text-[10px] text-muted-foreground">kolom</span>

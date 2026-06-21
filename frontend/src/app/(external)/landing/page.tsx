@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -48,9 +48,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 
-/* ────────────────────────────────────────────────────────────────────────────
- * BRAND ICONS (inline — lucide-react removed brand icons in recent versions)
- * ──────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * BRAND ICONS (inline â€” lucide-react removed brand icons in recent versions)
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function Github({ className }: { className?: string }) {
   return (
@@ -80,9 +80,9 @@ function Linkedin({ className }: { className?: string }) {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * DATA
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const TEAM_MEMBERS = [
   { id: 1, name: "Fityanandra Athar Adyaksa", nim: "52250059", role: "Software Engineer", linkedin: "https://www.linkedin.com/in/fityanandra", github: "https://github.com/YanDraa", githubUser: "YanDraa", initials: "FA" },
@@ -102,16 +102,16 @@ const STATS = [
 ];
 
 const PIPELINE_STEPS = [
-  { step: "01", label: "Upload Dataset", sub: "CSV · XLSX · TXT", icon: UploadCloud, detail: "Drag & drop file — sistem mendeteksi skema, tipe data, dan struktur secara otomatis." },
-  { step: "02", label: "Auto Cleaning", sub: "Dedup · Null Purge", icon: Filter, detail: "Pipeline membersihkan duplikat, baris kosong, dan anomali dengan telemetri real-time." },
-  { step: "03", label: "AI Analysis", sub: "Stats · Charts · Insight", icon: Brain, detail: "Rule-based engine memilih visualisasi optimal dan menghasilkan insight naratif." },
-  { step: "04", label: "Export Report", sub: "PDF · PNG · Markdown", icon: FileDown, detail: "Ekspor laporan eksekutif dalam tiga format — siap dipresentasikan ke stakeholder." },
+  { step: "01", label: "Upload Dataset", sub: "CSV Â· XLSX Â· TXT", icon: UploadCloud, detail: "Drag & drop file â€” sistem mendeteksi skema, tipe data, dan struktur secara otomatis." },
+  { step: "02", label: "Auto Cleaning", sub: "Dedup Â· Null Purge", icon: Filter, detail: "Pipeline membersihkan duplikat, baris kosong, dan anomali dengan telemetri real-time." },
+  { step: "03", label: "AI Analysis", sub: "Stats Â· Charts Â· Insight", icon: Brain, detail: "Rule-based engine memilih visualisasi optimal dan menghasilkan insight naratif." },
+  { step: "04", label: "Export Report", sub: "PDF Â· PNG Â· Markdown", icon: FileDown, detail: "Ekspor laporan eksekutif dalam tiga format â€” siap dipresentasikan ke stakeholder." },
 ];
 
 const BENTO_FEATURES = [
   {
     icon: Filter,
-    tag: "01 · Pipeline",
+    tag: "01 Â· Pipeline",
     title: "Automated Cleaning Pipeline",
     desc: "Deteksi otomatis menghapus duplikat, memurnikan baris kosong, dan menampilkan telemetri peringatan secara instan.",
     metric: "100%",
@@ -121,7 +121,7 @@ const BENTO_FEATURES = [
   },
   {
     icon: BarChart2,
-    tag: "02 · Intelligence",
+    tag: "02 Â· Intelligence",
     title: "Statistical Chart Recommender",
     desc: "Rule-based intelligence memilih dan merender chart Highcharts paling optimal sesuai distribusi kolom.",
     metric: "10+",
@@ -131,9 +131,9 @@ const BENTO_FEATURES = [
   },
   {
     icon: Layers,
-    tag: "03 · Exploration",
+    tag: "03 Â· Exploration",
     title: "Multi-Surface Exploration",
-    desc: "Navigasi mulus lintas Univariat, Bivariat, Multivariat, dan Time Series — terpadu dalam satu antarmuka.",
+    desc: "Navigasi mulus lintas Univariat, Bivariat, Multivariat, dan Time Series â€” terpadu dalam satu antarmuka.",
     metric: "4",
     metricLabel: "Dimensi Analisis",
     span: "md:col-span-1 md:row-span-1",
@@ -141,7 +141,7 @@ const BENTO_FEATURES = [
   },
   {
     icon: Wand2,
-    tag: "04 · Reporting",
+    tag: "04 Â· Reporting",
     title: "Executive Report Engine",
     desc: "Narasi analitis lengkap berbasis Markdown, lalu ekspor ke PDF atau gambar langsung dari browser.",
     metric: "3",
@@ -151,7 +151,7 @@ const BENTO_FEATURES = [
   },
   {
     icon: Brain,
-    tag: "05 · AI Core",
+    tag: "05 Â· AI Core",
     title: "Insight Generation",
     desc: "Gemini AI mengubah hasil statistik mentah menjadi insight bisnis yang dapat ditindaklanjuti.",
     metric: "AI",
@@ -161,9 +161,9 @@ const BENTO_FEATURES = [
   },
   {
     icon: Cpu,
-    tag: "06 · Performance",
+    tag: "06 Â· Performance",
     title: "Browser-Native Compute",
-    desc: "Semua proses berjalan di sisi klien — tanpa server tambahan, tanpa latensi jaringan.",
+    desc: "Semua proses berjalan di sisi klien â€” tanpa server tambahan, tanpa latensi jaringan.",
     metric: "0ms",
     metricLabel: "Server Latency",
     span: "md:col-span-3 md:row-span-1",
@@ -180,9 +180,9 @@ const FLOATING_INSIGHTS = [
   { label: "Variance", value: "1.42", trend: "stable", icon: Activity },
 ];
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * HOOKS
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function useMounted() {
   const [mounted, setMounted] = useState(false);
@@ -208,11 +208,11 @@ function useAnimatedNumber(target: number, active: boolean, duration = 1400) {
   return value;
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * PRIMITIVES
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-/** Magnetic button — pulls toward cursor on hover */
+/** Magnetic button â€” pulls toward cursor on hover */
 function MagneticWrap({
   children,
   strength = 0.25,
@@ -299,9 +299,9 @@ function StatNumber({ target, suffix }: { target: number; suffix?: string }) {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * BACKGROUND LAYERS
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const gridStyle: CSSProperties = {
   backgroundImage: `linear-gradient(to right, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 1px)`,
@@ -314,9 +314,9 @@ const noiseStyle: CSSProperties = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E")`,
 };
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * SPOTLIGHT CURSOR (Hero)
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function Spotlight() {
   const ref = useRef<HTMLDivElement>(null);
@@ -361,10 +361,10 @@ function Spotlight() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * AI CORE VISUALIZATION
  * Animated orbital rings with floating insight chips
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function AICore() {
   return (
@@ -456,9 +456,9 @@ function AICore() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * LIVE DASHBOARD MOCKUP
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function LiveDashboard() {
   const [tick, setTick] = useState(0);
@@ -525,7 +525,7 @@ function LiveDashboard() {
           <div className="relative h-32 rounded-lg border border-border bg-background/50 p-3">
             <div className="absolute right-3 top-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Distribution · Live
+              Distribution Â· Live
             </div>
             <div className="flex h-full items-end gap-1.5 pt-4">
               {bars.map((h, i) => (
@@ -554,13 +554,13 @@ function LiveDashboard() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * PAGE
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * LOGIN DIALOG
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
@@ -576,7 +576,7 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/auth/login", {
+      const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -631,7 +631,7 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
               <input
                 id="login-password"
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -681,9 +681,9 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * PAGE
- * ──────────────────────────────────────────────────────────────────────── */
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export default function LandingPage() {
   const mounted = useMounted();
@@ -704,7 +704,7 @@ export default function LandingPage() {
         style={noiseStyle}
       />
 
-      {/* ──────────── NAV ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
           navBlur ? "border-b border-border/60 bg-background/70 backdrop-blur-xl" : ""
@@ -762,7 +762,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ──────────── HERO ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="relative pt-32 pb-24 md:pt-40 md:pb-32" data-testid="hero-section">
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0" style={gridStyle} />
         <div
@@ -783,7 +783,7 @@ export default function LandingPage() {
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1.6, repeat: Infinity }}
               />
-              <span className="text-muted-foreground">Proyek UAS · Pemrograman Data Sains · 2025</span>
+              <span className="text-muted-foreground">Proyek UAS Â· Pemrograman Data Sains Â· 2025</span>
             </div>
           </Reveal>
 
@@ -807,8 +807,8 @@ export default function LandingPage() {
 
           <Reveal delay={0.2}>
             <p className="mx-auto mt-8 max-w-2xl text-center text-base text-muted-foreground md:text-lg">
-              AutomationEDA mengotomatiskan seluruh alur eksplorasi data — pembersihan dataset, rekomendasi chart
-              berbasis AI, hingga laporan analitis siap ekspor — dalam satu agentic pipeline yang bekerja untuk Anda.
+              AutomationEDA mengotomatiskan seluruh alur eksplorasi data â€” pembersihan dataset, rekomendasi chart
+              berbasis AI, hingga laporan analitis siap ekspor â€” dalam satu agentic pipeline yang bekerja untuk Anda.
             </p>
           </Reveal>
 
@@ -854,7 +854,7 @@ export default function LandingPage() {
                   >
                     <Icon className="h-4 w-4 text-primary opacity-70" />
                     <div className="font-mono text-3xl font-semibold tracking-tight">
-                      {mounted ? <StatNumber target={s.value} suffix={s.suffix} /> : "—"}
+                      {mounted ? <StatNumber target={s.value} suffix={s.suffix} /> : "â€”"}
                     </div>
                     <div className="text-xs text-muted-foreground">{s.label}</div>
                   </div>
@@ -874,7 +874,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── PIPELINE ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ PIPELINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section id="pipeline" className="relative border-t border-border py-24 md:py-32" data-testid="pipeline-section">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
@@ -889,7 +889,7 @@ export default function LandingPage() {
               </div>
               <p className="max-w-sm text-sm text-muted-foreground">
                 Pipeline berjalan secara berurutan namun tampak instan. Setiap tahap dirancang untuk diabaikan oleh
-                Anda — fokus pada keputusan, bukan eksekusi.
+                Anda â€” fokus pada keputusan, bukan eksekusi.
               </p>
             </div>
           </Reveal>
@@ -956,7 +956,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── BENTO FEATURES ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ BENTO FEATURES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section id="features" className="relative border-t border-border py-24 md:py-32" data-testid="features-section">
         <div
           aria-hidden
@@ -977,7 +977,7 @@ export default function LandingPage() {
                 <span className="italic font-serif text-muted-foreground/70">secara otomatis.</span>
               </h2>
               <p className="mt-4 text-base text-muted-foreground">
-                Dari upload hingga laporan ekspor — semua berjalan tanpa intervensi manual.
+                Dari upload hingga laporan ekspor â€” semua berjalan tanpa intervensi manual.
               </p>
             </div>
           </Reveal>
@@ -1039,7 +1039,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── LIVE / DATA FLOW SECTION ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ LIVE / DATA FLOW SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section id="live" className="relative border-t border-border py-24 md:py-32" data-testid="live-section">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -1053,7 +1053,7 @@ export default function LandingPage() {
                   <span className="italic font-serif text-muted-foreground/70">insight matang.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-base text-muted-foreground">
-                  Pipeline berjalan secara live di sisi browser. Tidak ada server tambahan, tidak ada latensi —
+                  Pipeline berjalan secara live di sisi browser. Tidak ada server tambahan, tidak ada latensi â€”
                   hanya data Anda dan pipeline yang bekerja untuk Anda.
                 </p>
 
@@ -1087,7 +1087,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── CTA BANNER ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CTA BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="relative border-t border-border py-24 md:py-32" data-testid="cta-section">
         <div className="mx-auto max-w-5xl px-6">
           <div className="relative overflow-hidden rounded-3xl border border-border bg-card/60 p-10 backdrop-blur-md md:p-16">
@@ -1111,7 +1111,7 @@ export default function LandingPage() {
               <Reveal delay={0.1}>
                 <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">
                   Upload dataset dan dapatkan insight mendalam lengkap dengan visualisasi interaktif dan laporan
-                  ekspor — dalam hitungan detik.
+                  ekspor â€” dalam hitungan detik.
                 </p>
               </Reveal>
               <Reveal delay={0.2}>
@@ -1139,7 +1139,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── TEAM ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TEAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section id="team" className="relative border-t border-border py-24 md:py-32 overflow-hidden" data-testid="team-section">
         {/* Background decorative blobs */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1279,7 +1279,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──────────── FOOTER ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <footer className="relative border-t border-border bg-card/30 py-10" data-testid="landing-footer">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
           <div className="flex items-center gap-2 text-sm">
@@ -1287,7 +1287,7 @@ export default function LandingPage() {
               <Sparkles className="h-3.5 w-3.5 text-primary" />
             </div>
             <span className="font-semibold">AutomationEDA</span>
-            <span className="text-muted-foreground">© 2025</span>
+            <span className="text-muted-foreground">Â© 2025</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-muted-foreground">
             <Link href="#pipeline" className="transition-colors hover:text-foreground">
@@ -1309,8 +1309,9 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* ──────────── LOGIN DIALOG ──────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ LOGIN DIALOG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }
+

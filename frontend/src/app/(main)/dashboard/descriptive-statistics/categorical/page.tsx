@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDataset } from "@/context/dataset-context";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "https://yandraa-my-fastapi-backend.hf.space";
 
 interface CatStats {
   [column: string]: {

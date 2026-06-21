@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { addHours, endOfToday, format, parseISO, subHours } from "date-fns";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useDataset } from "@/context/dataset-context";
 
-// ── Static fallback ───────────────────────────────────────────────────────────
+// â”€â”€ Static fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const STATIC_VALUES = [
   { newCustomers: 23840, activeAccounts: 6630, returningUsers: 4880 },
@@ -42,7 +42,7 @@ const STATIC_CONFIG = {
   returningUsers: { label: "Returning Users", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Sanitize kolom name jadi key CSS-variable-safe (hapus karakter non-alphanumeric)
 function toKey(col: string) {
@@ -61,7 +61,7 @@ function buildChartData(rows: Record<string, unknown>[], c1: string, c2: string,
   }));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ApiResponse = {
   activated: boolean;
@@ -79,7 +79,7 @@ export function PerformanceOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => {
         setApiData(d);
@@ -91,7 +91,7 @@ export function PerformanceOverview() {
       .catch(() => {});
   }, [dataset]);
 
-  // ── Fallback statis ───────────────────────────────────────────────────────
+  // â”€â”€ Fallback statis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!dataset || !apiData?.activated) {
     return (
       <Card className="@container/card">
@@ -176,7 +176,7 @@ export function PerformanceOverview() {
         <CardTitle className="leading-none">Performance Overview</CardTitle>
         <CardDescription>
           <span className="@[540px]/card:block hidden">
-            Tren kolom numerik — {apiData.dataset?.fileName}
+            Tren kolom numerik â€” {apiData.dataset?.fileName}
           </span>
           <span className="@[540px]/card:hidden">{apiData.dataset?.fileName}</span>
         </CardDescription>

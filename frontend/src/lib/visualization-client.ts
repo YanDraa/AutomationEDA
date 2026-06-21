@@ -1,4 +1,4 @@
-export const BACKEND_URL = "http://localhost:8000";
+﻿export const BACKEND_URL = "https://yandraa-my-fastapi-backend.hf.space";
 
 export type HighchartsOptions = Record<string, unknown>;
 
@@ -65,3 +65,4 @@ export async function postVisualizationOptions(
 
   return data.options;
 }
+

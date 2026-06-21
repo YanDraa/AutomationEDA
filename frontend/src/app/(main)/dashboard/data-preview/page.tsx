@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,11 +25,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://yandraa-my-fastapi-backend.hf.space";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function isMissingValue(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -37,7 +37,7 @@ function isMissingValue(value: unknown): boolean {
   return false;
 }
 
-// ─── Empty State ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EmptyState() {
   return (
@@ -61,7 +61,7 @@ function EmptyState() {
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function Page() {
   const router = useRouter();
@@ -76,7 +76,7 @@ export default function Page() {
     return Object.keys(dataPreview[0]);
   }, [dataPreview]);
 
-  // ── Auto-fetch on mount ─────────────────────────────────────────────────────
+  // â”€â”€ Auto-fetch on mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +123,7 @@ export default function Page() {
     };
   }, [router]);
 
-  // ─── Loading State ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Loading State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (loading) {
     return (
@@ -145,20 +145,20 @@ export default function Page() {
     );
   }
 
-  // ─── Empty / No Data ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Empty / No Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (!hasData) {
     return <EmptyState />;
   }
 
-  // ─── Metrics extraction ────────────────────────────────────────────────────
+  // â”€â”€â”€ Metrics extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const totalRows = (datasetMeta?.total_rows as number) ?? 0;
   const totalCols = (datasetMeta?.total_columns as number) ?? previewColumns.length;
   const duplicatedRows = (datasetMeta?.total_duplicated_rows as number) ?? 0;
   const missingCells = (datasetMeta?.total_missing_cells as number) ?? 0;
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <div className="flex min-w-0 w-full flex-col gap-4 overflow-hidden px-2">
@@ -170,7 +170,7 @@ export default function Page() {
         </p>
       </div>
 
-      {/* ── Notebook Diagnostics Panel ── */}
+      {/* â”€â”€ Notebook Diagnostics Panel â”€â”€ */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {/* Total Rows */}
         <Card>
@@ -244,13 +244,13 @@ export default function Page() {
         </Card>
       </div>
 
-      {/* ── Data Preview Table (max 10-row random sample) ── */}
+      {/* â”€â”€ Data Preview Table (max 10-row random sample) â”€â”€ */}
       {dataPreview.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Data Sample Preview</CardTitle>
             <CardDescription>
-              {String(dataPreview.length)} random rows · {String(totalCols)} columns · {totalRows.toLocaleString()} total rows
+              {String(dataPreview.length)} random rows Â· {String(totalCols)} columns Â· {totalRows.toLocaleString()} total rows
             </CardDescription>
           </CardHeader>
           <CardContent className="min-w-0 p-0">
@@ -300,3 +300,4 @@ export default function Page() {
     </div>
   );
 }
+

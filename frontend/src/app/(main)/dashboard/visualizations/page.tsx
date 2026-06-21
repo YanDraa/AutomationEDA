@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,8 +31,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { HighchartsChart } from "@/components/visualizations/highcharts-chart";
 import type { HighchartsOptions } from "@/lib/visualization-client";
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-const API_BASE = "http://localhost:8000";
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const API_BASE = "https://yandraa-my-fastapi-backend.hf.space";
 
 type ColumnClassification = {
   type: "Categorical (Qualitative)" | "Discrete Numeric" | "Continuous Numeric";
@@ -42,7 +42,7 @@ type ColumnClassification = {
 
 type SchemaMap = Record<string, ColumnClassification>;
 
-// ─── Highcharts Option Builders ──────────────────────────────────────────────
+// â”€â”€â”€ Highcharts Option Builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function buildBarChartOptions(payload: any): HighchartsOptions {
   const { chart_data, var_x } = payload;
@@ -236,7 +236,7 @@ function buildGroupedComparisonOptions(payload: any): HighchartsOptions {
   };
 }
 
-// ─── Empty State ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EmptyState() {
   return (
@@ -260,7 +260,7 @@ function EmptyState() {
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function Page() {
   const router = useRouter();
@@ -594,7 +594,7 @@ export default function Page() {
                     onChange={(e) => setVarY(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all duration-200"
                   >
-                    <option value="">— None (Univariate) —</option>
+                    <option value="">â€” None (Univariate) â€”</option>
                     {columnsList.map((col) => (
                       <option key={col} value={col} disabled={col === varX}>
                         {col}
@@ -768,3 +768,4 @@ export default function Page() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useState } from "react";
 
@@ -55,7 +55,7 @@ export default function Page() {
         const message =
           e instanceof Error
             ? e.message
-            : "Gagal membaca file. Pastikan backend berjalan di http://localhost:8000.";
+            : "Gagal membaca file. Pastikan backend berjalan di https://yandraa-my-fastapi-backend.hf.space.";
         setError(message);
       } finally {
         setIsParsing(false);
@@ -184,7 +184,7 @@ export default function Page() {
               {/* Error */}
               {error && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm">
-                  ⚠ {error}
+                  âš  {error}
                 </div>
               )}
 
@@ -247,7 +247,7 @@ export default function Page() {
                         : "bg-muted text-muted-foreground"
                       }`}
                   >
-                    {i === 0 && successFile ? "✓" : i + 1}
+                    {i === 0 && successFile ? "âœ“" : i + 1}
                   </div>
                   <span className={i === 0 && successFile ? "line-through text-muted-foreground" : ""}>{step}</span>
                 </div>

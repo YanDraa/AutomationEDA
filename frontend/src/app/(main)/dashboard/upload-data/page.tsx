@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -33,9 +33,9 @@ import {
   UploadHistory,
 } from "./upload-history";
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://yandraa-my-fastapi-backend.hf.space";
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".txt", ".json"] as const;
 type AcceptedExt = (typeof ACCEPTED_EXTENSIONS)[number];
@@ -53,7 +53,7 @@ const FORMAT_INFO: {
   { ext: ".xls", label: ".xls", desc: "Legacy Microsoft Excel", icon: FileSpreadsheet },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function isAccepted(fileName: string): boolean {
   const lower = fileName.toLowerCase();
@@ -66,7 +66,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function Page() {
   const router = useRouter();
@@ -84,7 +84,7 @@ export default function Page() {
 
   const accepted = useMemo(() => ACCEPTED_EXTENSIONS.join(","), []);
 
-  // ── Fetch upload history and active dataset on mount ──────────────────────────
+  // â”€â”€ Fetch upload history and active dataset on mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     async function fetchData() {
@@ -113,7 +113,7 @@ export default function Page() {
     fetchData();
   }, []);
 
-  // ── Upload handler: POST to /api/data/analyze → redirect on success ──────────
+  // â”€â”€ Upload handler: POST to /api/data/analyze â†’ redirect on success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleFileUpload = useCallback(
     async (file: File | null | undefined) => {
@@ -187,7 +187,7 @@ export default function Page() {
         const message =
           e instanceof Error
             ? e.message
-            : "Failed to process file. Ensure backend is running at http://localhost:8000.";
+            : "Failed to process file. Ensure backend is running at https://yandraa-my-fastapi-backend.hf.space.";
         setError(message);
       } finally {
         setIsParsing(false);
@@ -196,7 +196,7 @@ export default function Page() {
     [setDataset, router],
   );
 
-  // ── Delete handler ─────────────────────────────────────────────────────────
+  // â”€â”€ Delete handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleDelete = useCallback(
     async (fileName: string) => {
@@ -277,7 +277,7 @@ export default function Page() {
     [setDataset, router],
   );
 
-  // ── Drag & drop handlers ────────────────────────────────────────────────────
+  // â”€â”€ Drag & drop handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const onDrop: React.DragEventHandler<HTMLLabelElement> = useCallback(
     (e) => {
@@ -316,7 +316,7 @@ export default function Page() {
     )?.click();
   }, []);
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
@@ -328,7 +328,7 @@ export default function Page() {
         </p>
       </div>
 
-      {/* ── Upload Section ── */}
+      {/* â”€â”€ Upload Section â”€â”€ */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Dropzone */}
         <div className="lg:col-span-2">
@@ -442,7 +442,7 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* Right Panel — Supported formats */}
+        {/* Right Panel â€” Supported formats */}
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
@@ -465,7 +465,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* ── Upload History ── */}
+      {/* â”€â”€ Upload History â”€â”€ */}
       {uploadHistory.length > 0 && (
         <UploadHistory
           history={uploadHistory}
@@ -479,3 +479,4 @@ export default function Page() {
     </div>
   );
 }
+

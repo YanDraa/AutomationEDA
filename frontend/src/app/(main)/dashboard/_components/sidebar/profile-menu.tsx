@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,7 +33,7 @@ export function ProfileMenu() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/auth/me", {
+        const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/auth/me", {
           credentials: "include",
         });
         if (res.ok) {
@@ -48,7 +48,7 @@ export function ProfileMenu() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8000/api/auth/logout", {
+      await fetch("https://yandraa-my-fastapi-backend.hf.space/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
@@ -99,3 +99,4 @@ export function ProfileMenu() {
     </DropdownMenu>
   );
 }
+
