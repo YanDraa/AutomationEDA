@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, CheckCircle2, AlertCircle, BarChart3, HelpCircle, FileX, TrendingUp, Info } from "lucide-react";
-import api from "@/lib/axios";
+import { BACKEND_URL } from "@/lib/visualization-client";
 
 interface InsightData {
   highest_average: Array<{ column: string; mean: number; insight: string }>;
@@ -35,14 +35,15 @@ export default function InsightsPage() {
   useEffect(() => {
     const fetchInsights = async () => {
       try {
-        const response = await api.get("/api/insights");
-        if (response.data?.status === "success") {
-          setData(response.data.result);
+        const res = await fetch(`${BACKEND_URL}/api/insights`, { credentials: "include" });
+        const response = await res.json();
+        if (response?.status === "success") {
+          setData(response.result);
         } else {
           setError("Gagal memuat insight cerdas.");
         }
       } catch (err: any) {
-        setError(err.response?.data?.detail || "Terjadi kesalahan saat memuat insight.");
+        setError(err.message || "Terjadi kesalahan saat memuat insight.");
       } finally {
         setLoading(false);
       }
