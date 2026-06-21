@@ -1,526 +1,1043 @@
-# AutomationEDA (FastAPI + Next.js)
+<div align="center">
 
-Aplikasi **EDA otomatis** (Exploratory Data Analysis) yang menerima file dataset (CSV/Excel/JSON/TXT), menghitung ringkasan statistik, matriks korelasi (Pearson) untuk numerik, dan asosiasi (Cramér's V) untuk kategorik, serta menyediakan visualisasi dan insight.
+# 🔬 AutomationEDA
+
+**Automated Exploratory Data Analysis Platform**
+
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-automationeda.vercel.app-6366f1?style=for-the-badge)](https://automationeda.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+
+Platform EDA (Exploratory Data Analysis) otomatis yang mampu memproses dataset CSV/Excel/JSON/TXT, menghitung statistik deskriptif, korelasi Pearson, asosiasi Cramér's V, menghasilkan visualisasi interaktif, serta AI insights menggunakan Google Gemini / Groq (Llama 3.1).
+
+</div>
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 
-- [System Architecture](#system-architecture)
-- [Backend (FastAPI)](#backend-fastapi)
-- [Frontend (Next.js)](#frontend-nextjs)
-- [API Endpoints](#api-endpoints)
-- [Data Flow](#data-flow)
-- [Prasyarat](#prasyarat)
-- [Cara Menjalankan](#cara-menjalankan)
+- [🌐 Live Demo](#-live-demo)
+- [✨ Features](#-features)
+- [🏗️ System Architecture](#️-system-architecture)
+- [📦 Tech Stack](#-tech-stack)
+- [🚀 Quick Start (Local Development)](#-quick-start-local-development)
+  - [Prerequisites](#prerequisites)
+  - [1. Clone Repository](#1-clone-repository)
+  - [2. Backend Setup (FastAPI)](#2-backend-setup-fastapi)
+  - [3. Frontend Setup (Next.js)](#3-frontend-setup-nextjs)
+  - [4. Environment Variables](#4-environment-variables)
+- [🗂️ Project Structure](#️-project-structure)
+  - [Backend Structure](#backend-structure)
+  - [Frontend Structure](#frontend-structure)
+- [🔌 API Reference](#-api-reference)
+  - [Authentication](#authentication)
+  - [Dataset](#dataset)
+  - [Cleaning](#cleaning)
+  - [Analysis](#analysis)
+  - [Visualization](#visualization)
+  - [Insights](#insights)
+  - [Reports & Export](#reports--export)
+  - [History](#history)
+- [🔄 Data Flow](#-data-flow)
+  - [Upload → Analysis Flow](#upload--analysis-flow)
+  - [Cleaning Flow](#cleaning-flow)
+  - [Visualization Flow](#visualization-flow)
+  - [AI Insight Flow](#ai-insight-flow)
+- [🧠 Core Modules Deep Dive](#-core-modules-deep-dive)
+  - [EDA Pipeline](#eda-pipeline)
+  - [AI Insights Architecture](#ai-insights-architecture)
+  - [JSON Safety Pipeline](#json-safety-pipeline)
+  - [Report Generation](#report-generation)
+  - [Per-User Data Storage](#per-user-data-storage)
+- [🎨 Frontend Architecture](#-frontend-architecture)
+  - [State Management](#state-management)
+  - [Visualization Architecture](#visualization-architecture)
+  - [Route Protection](#route-protection)
+- [🔐 Authentication](#-authentication)
+- [🐳 Docker (Backend)](#-docker-backend)
+- [🚢 Deployment](#-deployment)
+- [🛠️ Development Tools](#️-development-tools)
+- [📄 License](#-license)
 
 ---
 
-## System Architecture
+## 🌐 Live Demo
+
+> **Production URL:** [https://automationeda.vercel.app](https://automationeda.vercel.app)
+
+| Akun Demo | Email | Password |
+|---|---|---|
+| Administrator | `hello@arhamkhnz.com` | `admin123` |
+| Admin | `hello@ammarkhnz.com` | `admin123` |
+| User | `test@test.com` | `test123` |
+
+---
+
+## ✨ Features
+
+| Fitur | Deskripsi |
+|---|---|
+| 📤 **Multi-format Upload** | Mendukung CSV, Excel (XLSX/XLS), JSON, dan TXT |
+| 📊 **Descriptive Statistics** | Mean, median, std, variance, skewness, kurtosis, Shapiro-Wilk normality test, IQR outlier detection |
+| 🔗 **Correlation Matrix** | Pearson correlation untuk kolom numerik |
+| 🗂️ **Association Matrix** | Cramér's V untuk kolom kategorik |
+| 🧹 **Data Cleaning** | Drop duplikat, impute mean/median/mode, drop missing rows, standardize text |
+| 📈 **Interactive Visualizations** | Histogram, boxplot, bar chart, pie chart, scatter plot, heatmap, stacked bar, time series (via Highcharts) |
+| 🤖 **AI Insights** | Google Gemini 1.5 Flash / Groq Llama 3.1-70b — fallback rule-based engine |
+| 📝 **Academic Reports** | Export PDF (ReportLab), HTML (Jinja2), CSV, XLSX dalam format journal akademik |
+| 🔐 **Auth** | JWT + httpOnly cookie, session 7 hari |
+| 📚 **Upload History** | Simpan & restore 10 dataset terakhir per user |
+
+---
+
+## 🏗️ System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     Browser                                  │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │            Next.js 16 App (Frontend)                    │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌─────────────────────┐   │  │
-│  │  │ Upload   │  │ Preview  │  │ Visualizations      │   │  │
-│  │  │ Page     │  │ Page     │  │ (Highcharts)        │   │  │
-│  │  └──────────┘  └──────────┘  └─────────────────────┘   │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌─────────────────────┐   │  │
-│  │  │ Cleaning │  │ Insights │  │ Reports & Export    │   │  │
-│  │  │ Page     │  │ Page     │  │ (PDF/CSV/XLSX)      │   │  │
-│  │  └──────────┘  └──────────┘  └─────────────────────┘   │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                           │ HTTP (credentials: include)      │
-│                           ▼                                  │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │              FastAPI Server (Backend)                   │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌─────────────────────┐   │  │
-│  │  │ Auth     │  │ EDA      │  │ AI Engine           │   │  │
-│  │  │ (JWT)    │  │ Pipeline │  │ (Gemini/Groq)       │   │  │
-│  │  └──────────┘  └──────────┘  └─────────────────────┘   │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌─────────────────────┐   │  │
-│  │  │ Cleaning │  │ Reports  │  │ Visualization Gen   │   │  │
-│  │  │ Module   │  │ (PDF/    │  │ (Highcharts config)  │   │  │
-│  │  │          │  │  HTML)   │  │                      │   │  │
-│  │  └──────────┘  └──────────┘  └─────────────────────┘   │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Browser / Client                           │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │                  Next.js 16 App (Frontend)                    │  │
+│  │                                                               │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐  │  │
+│  │  │  Upload &   │  │   Data      │  │   Visualizations     │  │  │
+│  │  │  Preview    │  │   Cleaning  │  │   (Highcharts)       │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────────────┘  │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐  │  │
+│  │  │ Descriptive │  │ AI Insights │  │  Reports & Export    │  │  │
+│  │  │ Statistics  │  │ & Interpret │  │  (PDF/CSV/XLSX)      │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────────────┘  │  │
+│  │                                                               │  │
+│  │  State: React Context + Zustand + Next.js Server Actions      │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                        │                                            │
+│              HTTP REST (credentials: include)                       │
+│              Cookie: eda_session_token (httpOnly)                   │
+│                        │                                            │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │                  FastAPI Server (Backend)                     │  │
+│  │                                                               │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐  │  │
+│  │  │  Auth (JWT) │  │ EDA Pipeline│  │   AI Engine          │  │  │
+│  │  │  PyJWT HS256│  │ Pandas+SciPy│  │  Gemini / Groq       │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────────────┘  │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐  │  │
+│  │  │  Cleaning   │  │  Reports    │  │  Visualization Gen   │  │  │
+│  │  │  Module     │  │  (ReportLab │  │  (Highcharts JSON)   │  │  │
+│  │  │             │  │   Jinja2)   │  │                      │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────────────┘  │  │
+│  │                                                               │  │
+│  │  Storage: Per-user pickle files (backend/data/users/{id}/)   │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
-
-**Stack:**
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Zustand, Highcharts, Recharts
-- **Backend:** Python 3.10+, FastAPI, Pandas, NumPy, SciPy, ReportLab, Jinja2
-- **AI:** Google Gemini 1.5 Flash, Groq (Llama 3.1) — fallback rule-based engine
-- **Auth:** JWT (PyJWT) with httpOnly cookies
-- **Storage:** Per-user pickle files (`backend/data/users/{user_id}/`)
 
 ---
 
-## Backend (FastAPI)
+## 📦 Tech Stack
 
-### Directory Structure
+### Backend
+| Teknologi | Versi | Kegunaan |
+|---|---|---|
+| **Python** | 3.10+ | Runtime utama |
+| **FastAPI** | 0.115.8 | REST API framework |
+| **Uvicorn** | 0.34.0 | ASGI server |
+| **Pandas** | 2.2.3 | Manipulasi & analisis data |
+| **NumPy** | 2.2.3 | Komputasi numerik |
+| **SciPy** | 1.15.1 | Shapiro-Wilk test, statistik lanjutan |
+| **openpyxl** | 3.1.5 | Baca/tulis file Excel (XLSX) |
+| **xlrd** | 2.0.1 | Baca file Excel lama (XLS) |
+| **PyJWT** | 2.9.0 | JWT authentication |
+| **ReportLab** | latest | Generate PDF |
+| **Jinja2** | latest | Template HTML report |
+| **google-generativeai** | 0.8.4 | Google Gemini AI API |
+| **groq** | latest | Groq (Llama 3.1) API |
+| **python-dotenv** | 1.0.1 | Environment variables |
+| **python-multipart** | 0.0.20 | File upload (multipart/form-data) |
+
+### Frontend
+| Teknologi | Versi | Kegunaan |
+|---|---|---|
+| **Next.js** | 16.x | React framework + App Router |
+| **React** | 19.x | UI library |
+| **TypeScript** | 5.x | Type safety |
+| **Tailwind CSS** | 4.x | Utility-first CSS |
+| **shadcn/ui** | 4.x | Accessible UI components |
+| **Zustand** | 5.x | Global state management |
+| **Highcharts** | 12.x | Interactive charts |
+| **Recharts** | 3.x | React chart library |
+| **Framer Motion** | 12.x | Animasi |
+| **TanStack Table** | 8.x | Tabel data canggih |
+| **Zod** | 4.x | Schema validation |
+| **React Hook Form** | 7.x | Form management |
+| **Biome** | 2.x | Linting & formatting |
+| **Husky** | 9.x | Git hooks |
+
+### Deployment
+| Komponen | Platform |
+|---|---|
+| **Frontend** | [Vercel](https://vercel.com) |
+| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) (Docker) |
+
+---
+
+## 🚀 Quick Start (Local Development)
+
+### Prerequisites
+
+Pastikan tools berikut sudah terinstall di sistem kamu:
+
+- **Python 3.10+** → [download](https://www.python.org/downloads/)
+- **Node.js 18+** → [download](https://nodejs.org/)
+- **npm** (bundled bersama Node.js)
+- **Git** → [download](https://git-scm.com/)
+
+Verifikasi instalasi:
+```bash
+python --version    # Python 3.10.x atau lebih baru
+node --version      # v18.x.x atau lebih baru
+npm --version       # 9.x.x atau lebih baru
+git --version
+```
+
+---
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/YanDraa/AutomationEDA.git
+cd AutomationEDA
+```
+
+---
+
+### 2. Backend Setup (FastAPI)
+
+#### a. Masuk ke direktori backend
+
+```bash
+cd backend
+```
+
+#### b. Buat virtual environment
+
+```bash
+# Windows
+python -m venv .venv
+.venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+> **Tanda aktivasi berhasil:** Prompt terminal akan menampilkan `(.venv)` di depannya.
+
+#### c. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Proses ini akan menginstall semua library yang dibutuhkan (FastAPI, Pandas, NumPy, SciPy, ReportLab, dll.).
+
+#### d. Buat file `.env`
+
+```bash
+# Buat file .env di dalam direktori backend/
+cp .env.example .env   # jika ada contohnya
+# atau buat manual:
+```
+
+Isi file `backend/.env`:
+```env
+AUTH_SECRET_KEY=automationeda-secret-key-2025
+GEMINI_API_KEY=your_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+> **Catatan:** `GEMINI_API_KEY` dan `GROQ_API_KEY` bersifat opsional. Jika keduanya tidak diset, sistem akan otomatis menggunakan **rule-based fallback engine** untuk insight.
+
+#### e. Jalankan backend server
+
+```bash
+uvicorn main:app --reload
+```
+
+Backend akan berjalan di: **http://localhost:8000**
+
+Dokumentasi API interaktif (Swagger UI) tersedia di: **http://localhost:8000/docs**
+
+---
+
+### 3. Frontend Setup (Next.js)
+
+Buka terminal **baru** (jangan tutup terminal backend), lalu:
+
+#### a. Masuk ke direktori frontend
+
+```bash
+# dari root project
+cd frontend
+```
+
+#### b. Install dependencies
+
+```bash
+npm install
+```
+
+#### c. Buat file `.env.local`
+
+```bash
+# Buat file .env.local di dalam direktori frontend/
+```
+
+Isi file `frontend/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+> **Penting:** Variabel ini menentukan ke mana frontend mengirim request API. Untuk production, nilainya adalah URL backend yang sudah di-deploy (misal: Hugging Face Spaces URL).
+
+#### d. Jalankan development server
+
+```bash
+npm run dev
+```
+
+Frontend akan berjalan di: **http://localhost:3000**
+
+---
+
+### 4. Environment Variables
+
+#### Backend (`backend/.env`)
+
+| Variable | Required | Default | Deskripsi |
+|---|---|---|---|
+| `AUTH_SECRET_KEY` | ✅ Ya | `automationeda-secret-key-2025` | Kunci untuk menandatangani JWT (HS256). **Ganti di production!** |
+| `GEMINI_API_KEY` | ⚙️ Opsional | — | Google Gemini 1.5 Flash API key. Dapatkan di [Google AI Studio](https://aistudio.google.com/) |
+| `GROQ_API_KEY` | ⚙️ Opsional | — | Groq API key untuk Llama 3.1-70b. Dapatkan di [console.groq.com](https://console.groq.com/) |
+
+#### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Deskripsi |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | ✅ Ya | URL backend FastAPI. Contoh: `http://localhost:8000` (dev) atau URL Hugging Face Spaces (prod) |
+
+---
+
+## 🗂️ Project Structure
+
+### Backend Structure
 
 ```
 backend/
-├── main.py                          # Entry point: FastAPI app, all routes, orchestrator
+├── main.py                          # Entry point: FastAPI app, semua routes, orchestrator
 ├── cleaning.py                      # Dataset cleaning logic
-├── insights.py                      # AI insights + rule-based fallback
+├── insights.py                      # AI insights + rule-based fallback engine
 ├── requirements.txt                 # Python dependencies
+├── Dockerfile                       # Docker image untuk deploy ke Hugging Face Spaces
+├── .env                             # Environment variables (tidak di-commit ke Git)
 ├── backend/
 │   ├── __init__.py
-│   ├── auth.py                      # JWT auth, hardcoded users
-│   ├── categorical_analysis.py      # Cramér's V, describe_categorical
-│   ├── dependencies.py              # FastAPI Depends (require_user_id)
-│   ├── descriptive_stats.py         # describe_numeric (Shapiro-Wilk, IQR, skewness)
+│   ├── auth.py                      # JWT auth, user store, cookie management
+│   ├── categorical_analysis.py      # Cramér's V, describe_categorical()
+│   ├── dependencies.py              # FastAPI Depends → require_user_id
+│   ├── descriptive_stats.py         # describe_numeric() (Shapiro-Wilk, IQR, skewness)
 │   ├── reports.py                   # Full report builder, PDF/HTML/XLSX export
-│   ├── utils.py                     # File I/O, JSON sanitization, user paths
-│   └── visualization.py             # Highcharts config generators
+│   ├── utils.py                     # File I/O, JSON sanitization, user path resolver
+│   └── visualization.py             # Highcharts JSON config generators
 └── data/
     └── users/{user_id}/             # Per-user pickle + metadata storage
+        ├── data_raw.pkl
+        ├── data_clean.pkl
+        ├── active_dataset.pkl
+        ├── active_dataset_meta.json
+        └── upload_history.json
 ```
 
-### Core Modules
+### Frontend Structure
 
-| Module | File | Responsibility |
-|---|---|---|
-| **Auth** | `backend/auth.py` | JWT creation/verification, hardcoded user store (`USERS_DB`), cookie-based sessions |
-| **Dependencies** | `backend/dependencies.py` | FastAPI `Depends(require_user_id)` — extracts user ID from JWT cookie |
-| **Utils** | `backend/utils.py` | File parsing (CSV/XLSX/JSON/TXT), per-user path resolution, JSON sanitization (`sanitize_obj`, `clean_json_payload`), dataset preview builder |
-| **Descriptive Stats** | `backend/descriptive_stats.py` | `describe_numeric()` — mean, median, std, variance, skewness, kurtosis, Shapiro-Wilk normality test, IQR outlier detection |
-| **Categorical Analysis** | `backend/categorical_analysis.py` | `describe_categorical()` — mode, frequency, missing %, unique count; `_manual_pearson()`, `_manual_cramers_v()` — manual implementations of Pearson r and Cramér's V |
-| **Visualization** | `backend/visualization.py` | Generates **Highcharts** JSON config for histogram, boxplot, bar chart, pie chart, scatter plot, heatmap, stacked bar, grouped box plot, time series |
-| **Reports** | `backend/reports.py` | `build_full_report()` — journal-style academic report with anomaly scan, dispersion/skewness/correlation narratives, strategic verdict; PDF via ReportLab, HTML via Jinja2, XLSX via openpyxl |
-| **Cleaning** | `cleaning.py` | `clean_dataset()` — drops duplicates, drops missing rows, standardizes column names |
-| **Insights** | `insights.py` | `generate_ai_insight()` — Gemini AI insight with rule-based fallback (7 fallback types: overview, summary, numerical, categorical, bivariate, generic); `get_chart_recommendation()` — AI chart recommendation with fallback; `generate_intelligent_insights()` — 7-category computed insight bundle |
-| **Main** | `main.py` | App bootstrap, CORS, all REST endpoints, JSON safety pipeline, orchestrator |
+```
+frontend/
+├── package.json
+├── next.config.mjs                  # Next.js config (React Compiler, redirects)
+├── tsconfig.json
+├── biome.json                       # Biome linter/formatter config
+├── postcss.config.mjs
+├── components.json                  # shadcn/ui config
+└── src/
+    ├── app/
+    │   ├── globals.css              # Global Tailwind CSS styles + CSS variables
+    │   ├── layout.tsx               # Root layout (Geist font, theme provider)
+    │   ├── not-found.tsx            # Custom 404 page
+    │   ├── (external)/
+    │   │   ├── landing/             # Landing page (public, no auth required)
+    │   │   └── page.tsx             # Root redirect → /landing
+    │   └── (main)/
+    │       ├── auth/                # Login page
+    │       ├── unauthorized/        # Access denied page
+    │       └── dashboard/           # Protected main application
+    │           ├── layout.tsx       # Dashboard layout (Sidebar, Header, DatasetProvider)
+    │           ├── page.tsx         # Default redirect → upload-data
+    │           ├── data-preview/    # Tabel preview dataset
+    │           ├── cleaning/        # Cleaning diagnostics
+    │           ├── data-cleaning/   # Interactive per-action cleaning
+    │           ├── descriptive-statistics/  # Tabel statistik numerik & kategorik
+    │           ├── analytics/       # Charts & statistical analysis
+    │           ├── insights/        # AI insight dashboard (7 kategori)
+    │           ├── interpretation/  # Column-by-column AI analysis
+    │           ├── visualizations/  # Highcharts + AI chart recommendation
+    │           ├── reports/         # Generate PDF/HTML report
+    │           ├── download/        # Export CSV/XLSX/PDF
+    │           └── upload-data/     # Drag-and-drop file upload
+    ├── components/
+    │   ├── ui/                      # shadcn/ui components (Button, Card, Dialog, dll.)
+    │   ├── visualizations/
+    │   │   ├── highcharts-chart.tsx     # Dynamic Highcharts wrapper (singleton pattern)
+    │   │   ├── ai-insight-panel.tsx     # Panel display AI insight
+    │   │   ├── viz-field-select.tsx     # Column selector untuk visualisasi
+    │   │   └── viz-page-shell.tsx       # Visualization page shell
+    │   ├── empty-dataset.tsx        # Komponen untuk state dataset kosong
+    │   ├── date-range-picker.tsx
+    │   └── simple-icon.tsx
+    ├── config/
+    │   └── app-config.ts            # App metadata (nama, deskripsi, dll.)
+    ├── context/
+    │   └── dataset-context.tsx      # React Context untuk dataset state global
+    ├── hooks/
+    │   ├── use-dataset-columns.ts   # Custom hook: fetch numeric/categorical columns
+    │   └── use-mobile.ts            # Custom hook: deteksi mobile viewport
+    ├── lib/
+    │   ├── dataset-client.ts        # API client: dataset endpoints
+    │   ├── insights-client.ts       # API client: AI insights endpoints
+    │   ├── visualization-client.ts  # API client: Highcharts config endpoints
+    │   ├── reports-client.ts        # API client: report generation
+    │   ├── cookie.client.ts         # Cookie utilities (client-side)
+    │   ├── local-storage.client.ts  # LocalStorage utilities
+    │   ├── preferences/             # Sidebar layout preferences logic
+    │   ├── fonts/                   # Font loader (Geist)
+    │   └── utils.ts                 # cn() helper (clsx + tailwind-merge)
+    ├── navigation/
+    │   └── sidebar/                 # App sidebar navigation config & components
+    ├── proxy.ts                     # Next.js middleware → route protection
+    ├── scripts/                     # Build-time scripts (generate theme presets)
+    ├── server/
+    │   └── server-actions.ts        # Next.js Server Actions (sidebar preferences)
+    └── stores/
+        ├── preferences/             # Zustand store: sidebar & theme preferences
+        └── upload/                  # Zustand store: upload progress & history
+```
+
+---
+
+## 🔌 API Reference
+
+Base URL (local): `http://localhost:8000`
+Base URL (production): URL backend Hugging Face Spaces kamu
+
+> Semua endpoint yang memerlukan autentikasi membaca cookie `eda_session_token` secara otomatis dari request header.
+
+---
 
 ### Authentication
 
-Uses **JWT (HS256)** with httpOnly cookies. Hardcoded users for demo:
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | ❌ | Login dengan email & password. Menyimpan cookie `eda_session_token` |
+| `GET` | `/api/auth/me` | ✅ | Ambil info user saat ini berdasarkan cookie |
+| `POST` | `/api/auth/logout` | ✅ | Hapus cookie sesi |
 
-```python
-USERS_DB = [
-    {"id": "1", "email": "hello@arhamkhnz.com", "password": "admin123", "role": "administrator"},
-    {"id": "2", "email": "hello@ammarkhnz.com", "password": "admin123", "role": "admin"},
-    {"id": "3", "email": "test@test.com", "password": "test123", "role": "user"},
-]
+**Request body** `POST /api/auth/login`:
+```json
+{
+  "email": "test@test.com",
+  "password": "test123"
+}
 ```
 
-- Cookie name: `eda_session_token`
-- Expiry: 7 days
-- All protected endpoints use `Depends(require_user_id)` which reads the cookie
+**Response** `POST /api/auth/login`:
+```json
+{
+  "message": "Login successful",
+  "user": {
+    "id": "3",
+    "email": "test@test.com",
+    "role": "user"
+  }
+}
+```
+
+---
+
+### Dataset
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `GET` | `/api/current-dataset` | ✅ | Ambil metadata dataset aktif + preview + daftar kolom |
+| `POST` | `/api/upload` | ✅ | Upload file (multipart). Simpan ke user storage |
+| `POST` | `/api/data/analyze` | ✅ | Upload → parse → simpan → jalankan full EDA pipeline |
+| `GET` | `/api/data/analyze` | ✅ | Auto-fetch EDA diagnostics dari dataset yang sudah ada |
+| `GET` | `/api/data/me` | ✅ | Cek apakah user punya data raw/clean |
+| `GET` | `/api/data/ai-schema` | ✅ | AI-powered column type classification |
+| `POST` | `/api/data/chart-render` | ✅ | Statistical computation engine (univariate/bivariate/multivariate/timeseries) |
+| `POST` | `/api/reset` | ✅ | Reset/hapus semua dataset user |
+
+---
+
+### Cleaning
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/data/clean` | ✅ | Interactive cleaning: `drop_duplicates`, `impute_mean`, `impute_median`, `impute_mode`, `drop_missing_rows`, `standardize_text` |
+| `GET` | `/api/data/cleaning-summary` | ✅ | Diagnostik cleaning: per-kolom missing values, info duplikat |
+| `POST` | `/api/data/execute-cleaning` | ✅ | Execute cleaning action: `drop_duplicates`, `impute_missing`, `reset_raw` |
+
+**Request body** `POST /api/data/clean`:
+```json
+{
+  "action": "impute_mean",
+  "columns": ["Age", "Salary"]
+}
+```
+
+---
+
+### Analysis
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/analysis/numeric` | ✅ | Statistik deskriptif numerik |
+| `POST` | `/api/analysis/categorical` | ✅ | Statistik deskriptif kategorik |
+| `POST` | `/api/preview` | ✅ | Preview dataset (10 baris pertama) |
+| `GET` | `/api/insights` | ✅ | 7-kategori intelligent insights |
+| `GET` | `/api/interpretation` | ✅ | Column-by-column AI interpretation |
+| `GET` | `/api/reports` | ✅ | Full report data (semua statistik teragregasi) |
+
+---
+
+### Visualization
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/visualization/numerical` | ✅ | Config chart numerik (histogram, boxplot) |
+| `POST` | `/api/visualization/categorical` | ✅ | Config chart kategorik (bar chart, pie chart) |
+| `POST` | `/api/visualization/bivariate` | ✅ | Config chart bivariat (scatter, heatmap, stacked bar, box plot) |
+| `POST` | `/api/visualization/time-series` | ✅ | Config time series line chart |
+
+**Query params** contoh `POST /api/visualization/numerical`:
+```
+?col=Salary&chart_type=histogram
+```
+
+**Response** (Highcharts JSON config):
+```json
+{
+  "chart": { "type": "column", "zoomType": "x" },
+  "title": { "text": "Distribution of Salary" },
+  "xAxis": { "categories": ["0-1000", "1000-2000", ...] },
+  "yAxis": { "title": { "text": "Frequency" } },
+  "series": [{ "name": "Salary", "data": [12, 45, 67, ...] }]
+}
+```
+
+---
+
+### Insights
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/insights/univariate` | ✅ | AI insight untuk satu kolom |
+| `POST` | `/api/insights/bivariate` | ✅ | AI insight untuk relasi dua kolom |
+| `POST` | `/api/insights/text` | ✅ | Generic AI insight dari raw stats |
+| `POST` | `/api/insights/recommend-chart` | ✅ | Rekomendasi tipe chart dari AI |
+
+**Request body** `POST /api/insights/univariate`:
+```json
+{
+  "col": "Salary",
+  "type": "numerical"
+}
+```
+
+---
+
+### Reports & Export
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `POST` | `/api/export/report` | ✅ | Text report dengan AI insights |
+| `POST` | `/api/reports/generate` | ✅ | Generate PDF atau HTML dengan seksi yang dipilih |
+| `GET` | `/api/download/csv` | ✅ | Download dataset sebagai CSV |
+| `GET` | `/api/download/xlsx` | ✅ | Download dataset + statistik sebagai XLSX |
+| `GET` | `/api/download/pdf` | ✅ | Download report PDF |
+
+**Request body** `POST /api/reports/generate`:
+```json
+{
+  "format": "pdf",
+  "sections": ["overview", "statistics", "correlation", "conclusion"]
+}
+```
+
+---
+
+### History
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| `GET` | `/api/data/history` | ✅ | 10 upload terakhir untuk user saat ini |
+| `POST` | `/api/data/restore` | ✅ | Restore dataset dari history |
+| `DELETE` | `/api/data/history` | ✅ | Hapus dataset dari history + backup |
+
+---
+
+## 🔄 Data Flow
+
+### Upload → Analysis Flow
+
+```
+1. User drag-and-drop file ke upload dropzone (CSV/XLSX/JSON/TXT)
+        │
+        ▼
+2. Frontend POST multipart ke /api/data/analyze
+        │
+        ▼
+3. Backend _parse_uploaded_bytes():
+   ├── CSV  → coba encoding: utf-8-sig → utf-8 → latin-1 → cp1252
+   ├── XLSX → openpyxl
+   ├── TXT  → coba separator: tab → comma
+   └── JSON → array of objects ATAU column-oriented object
+        │
+        ▼
+4. Simpan raw bytes ke user directory
+   Pickle DataFrame → active_dataset.pkl
+   Buat backup dari file raw lama
+        │
+        ▼
+5. Jalankan _run_eda() pipeline:
+   ├── _compute_dataset_meta()      → rows, cols, duplicates, missing cells
+   ├── _compute_summary_stats()     → per numeric col: mean, median, std,
+   │                                   variance, min, max, q1, q3, skewness,
+   │                                   kurtosis, normality flag, outlier count
+   ├── _compute_pearson_matrix()    → full Pearson correlation matrix
+   └── _compute_cramers_v_matrix()  → Cramér's V association matrix (kategorik)
+        │
+        ▼
+6. Return JSON: { summary_stats, pearson_matrix, cramers_v_matrix,
+                  dataset_meta, data_preview }
+        │
+        ▼
+7. Frontend update DatasetContext → UI merender hasil analisis
+```
+
+---
+
+### Cleaning Flow
+
+```
+1. GET /api/data/analyze → load existing clean/raw data
+        │
+        ▼
+2. User pilih aksi cleaning di UI:
+   POST /api/data/clean { action: "impute_mean", columns: ["Age"] }
+        │
+        ▼
+3. Backend:
+   a. Load dari data_clean.pkl (fallback → data_raw.pkl)
+   b. Terapkan operasi cleaning:
+      - drop_duplicates   → df.drop_duplicates()
+      - impute_mean       → df[col].fillna(df[col].mean())
+      - impute_median     → df[col].fillna(df[col].median())
+      - impute_mode       → df[col].fillna(df[col].mode()[0])
+      - drop_missing_rows → df.dropna()
+      - standardize_text  → strip, lowercase, single spaces
+   c. Simpan ke data_clean.pkl DAN active_dataset.pkl
+   d. Update metadata (rows/cols baru)
+   e. Return changes summary (berapa baris terpengaruh)
+```
+
+---
+
+### Visualization Flow
+
+```
+1. Frontend fetch numeric_columns / categorical_columns dari /api/current-dataset
+        │
+        ▼
+2. User pilih kolom + tipe chart di UI
+        │
+        ▼
+3. Frontend POST ke visualization endpoint:
+   - /api/visualization/numerical?col=X&chart_type=histogram
+   - /api/visualization/categorical?col=Y&chart_type=piechart
+   - /api/visualization/bivariate?x_col=X&y_col=Y&chart_type=scatter
+   - /api/visualization/time-series?date_col=D&value_col=V
+        │
+        ▼
+4. Backend generate Highcharts-compatible JSON config
+        │
+        ▼
+5. Frontend render via <HighchartsChart options={config} />
+   (dynamic import dengan singleton module loading pattern)
+```
+
+---
+
+### AI Insight Flow
+
+```
+1. POST /api/insights/univariate { col: "Salary", type: "numerical" }
+        │
+        ▼
+2. Backend describe_numeric() → hitung statistik
+        │
+        ▼
+3. generate_ai_insight(stats, insight_type):
+   ├── GEMINI_API_KEY ada? → call Gemini 1.5 Flash
+   │   (system prompt: "Senior Data Analyst, jawab dalam Bahasa Indonesia")
+   ├── GROQ_API_KEY ada?   → call Llama 3.1-70b via Groq
+   └── Tidak ada?          → rule-based fallback engine:
+       ├── _fallback_overview     → dimensi dataset, jumlah kolom
+       ├── _fallback_summary      → peringatan missing values
+       ├── _fallback_numerical    → skewness, outlier, mean vs median
+       ├── _fallback_categorical  → mode dominance, missing %, kategori unik
+       ├── _fallback_bivariate    → interpretasi Pearson r / Cramér's V
+       └── _fallback_generic      → ringkasan statistik umum
+        │
+        ▼
+4. Return { stats: {...}, insight: "teks interpretasi..." }
+```
+
+---
+
+## 🧠 Core Modules Deep Dive
 
 ### EDA Pipeline
 
-The core analysis pipeline (`_run_eda()` in `main.py:1585`):
+Fungsi `_run_eda()` di `main.py` adalah orchestrator utama:
 
+```python
+# Pseudocode dari _run_eda()
+def _run_eda(df: pd.DataFrame) -> dict:
+    meta = _compute_dataset_meta(df)
+    # → { rows, columns, duplicates, missing_cells, missing_percentage }
+
+    stats = _compute_summary_stats(df)
+    # Per kolom numerik:
+    # { count, mean, median, std, variance, min, max, q1, q3,
+    #   skewness, kurtosis, is_normal (Shapiro-Wilk p > 0.05),
+    #   outlier_count (IQR method) }
+
+    pearson = _compute_pearson_matrix(df)
+    # Full n×n Pearson correlation matrix untuk semua kolom numerik
+
+    cramers_v = _compute_cramers_v_matrix(df)
+    # Full m×m Cramér's V association matrix untuk semua kolom kategorik
+
+    return { meta, stats, pearson, cramers_v }
 ```
-Input DataFrame
-    │
-    ├─► _compute_dataset_meta()    → rows, columns, duplicates, missing cells
-    ├─► _compute_summary_stats()   → per-numeric-column: count, mean, median, std,
-    │                                  variance, min, max, q1, q3, skewness, kurtosis,
-    │                                  normality flag, outlier count
-    ├─► _compute_pearson_matrix()  → full Pearson correlation matrix (nested dict)
-    └─► _compute_cramers_v_matrix()→ Cramér's V association matrix for categorical columns
+
+**Implementasi Cramér's V** (manual, tanpa library eksternal):
 ```
+V = sqrt(χ² / (n × min(r-1, c-1)))
+```
+di mana:
+- `χ²` = Chi-square statistic
+- `n` = jumlah observasi
+- `r` = jumlah baris (unique values kolom 1)
+- `c` = jumlah kolom (unique values kolom 2)
+
+---
 
 ### AI Insights Architecture
 
-```
-Insight Request
-    │
-    ├─► Gemini API key present?
-    │   YES ─► call Gemini 1.5 Flash (system prompt: Senior Data Analyst in Indonesian)
-    │   NO  ─► GROQ API key present?
-    │           YES ─► call Llama 3.1-70b via Groq
-    │           NO  ─► rule-based fallback engine
-    │
-    └─► Return insight text
-```
+7 kategori **Intelligent Insights** yang dihasilkan oleh `generate_intelligent_insights()`:
 
-**Fallback types:**
-- `_fallback_overview` — dataset dimensions, column counts
-- `_fallback_summary` — missing value warnings
-- `_fallback_numerical` — skewness, outliers, distribution, mean-vs-median analysis
-- `_fallback_categorical` — mode dominance, missing %, category count
-- `_fallback_bivariate` — Pearson r / Cramér's V interpretation
-- `_fallback_generic` — generic stats summary
+| Kategori | Deskripsi |
+|---|---|
+| `overview` | Ringkasan dimensi dataset (baris, kolom, tipe data) |
+| `summary` | Peringatan dan rangkuman missing values per kolom |
+| `numerical` | Distribusi, outlier, skewness untuk semua kolom numerik |
+| `categorical` | Mode dominance, persentase missing, jumlah kategori unik |
+| `bivariate` | Top korelasi Pearson dan asosiasi Cramér's V terkuat |
+| `anomaly` | Deteksi anomali dataset (kolom seluruhnya kosong, duplikat ekstrem) |
+| `verdict` | Strategic verdict & integrity score keseluruhan dataset |
+
+---
 
 ### JSON Safety Pipeline
 
-All endpoints pass through `clean_json_payload()` which recursively converts:
-- `np.int64`/`np.float64` → native Python int/float
-- `np.nan`/`float('inf')` → `None`
-- `np.ndarray` → list
-- `pd.Timestamp` → str
-- `pd.DataFrame` → `{columns, index, data}`
+Semua endpoint melewati `clean_json_payload()` untuk memastikan **100% JSON-safe output**:
 
-This guarantees 100% JSON compliance with zero NumPy/NaN leakage.
-
-### Per-User Data Storage
-
+```python
+def clean_json_payload(obj):
+    # Konversi rekursif:
+    # np.int64 / np.float64 → int / float (native Python)
+    # np.nan / float('inf') → None
+    # np.ndarray            → list
+    # pd.Timestamp          → str (ISO format)
+    # pd.DataFrame          → { columns, index, data }
+    # dict                  → rekursi key-value
+    # list                  → rekursi setiap elemen
 ```
-backend/data/users/{user_id}/
-├── data_raw.pkl              # Original uploaded DataFrame (pickle)
-├── data_clean.pkl            # Cleaned DataFrame (after interactive cleaning)
-├── active_dataset.pkl        # Currently active dataset (raw or clean)
-├── active_dataset_meta.json  # Metadata: fileName, rows, columns, fileSize, uploadedAt
-└── upload_history.json       # Last 10 uploads
-```
+
+Tanpa ini, FastAPI akan melempar `JSONEncodeError` karena NumPy/Pandas types tidak JSON-serializable secara native.
+
+---
 
 ### Report Generation
 
-| Format | Technology | Entry Point |
+Laporan akademik dihasilkan dalam 4 format:
+
+| Format | Library | Entry Point |
 |---|---|---|
 | **PDF** | ReportLab | `report_to_pdf_bytes()` |
 | **HTML** | Jinja2 | `_generate_html_jinja()` |
 | **CSV** | Pandas | `dataframe_to_csv_bytes()` |
 | **XLSX** | openpyxl | `dataframe_to_xlsx_bytes()` |
 
-The HTML/PDF report follows an **academic journal format** with:
-- Abstract (ABSTRAK)
-- Introduction (PENDAHULUAN)
-- Methodology (METODOLOGI) — IQR formula, skewness normality criterion
-- Results (HASIL DAN PEMBAHASAN) — anomaly tables, numeric/categorical stats tables, correlation insight
-- Conclusion (KESIMPULAN) — integrity score, strategic verdict
+Struktur **laporan journal akademik** (HTML/PDF):
+
+```
+ABSTRAK
+  └── Ringkasan dataset, metode analisis, temuan utama
+
+PENDAHULUAN
+  └── Konteks dataset, tujuan analisis
+
+METODOLOGI
+  ├── Formula IQR (outlier detection)
+  ├── Kriteria normalitas Shapiro-Wilk
+  └── Definisi Pearson r & Cramér's V
+
+HASIL DAN PEMBAHASAN
+  ├── Tabel anomali (kolom dengan outlier / missing ekstrem)
+  ├── Tabel statistik numerik (mean, std, skewness, kurtosis, dll.)
+  ├── Tabel statistik kategorik (mode, frekuensi, missing %)
+  └── Narasi insight korelasi (top Pearson / Cramér's V)
+
+KESIMPULAN
+  ├── Integrity score dataset (0–100%)
+  └── Strategic verdict (rekomendasi tindakan)
+```
 
 ---
 
-## Frontend (Next.js)
+### Per-User Data Storage
 
-### Directory Structure
+Setiap user memiliki direktori isolat di backend:
 
 ```
-frontend/
-├── package.json
-├── next.config.mjs
-├── tsconfig.json
-├── biome.json                  # Linting/formatting (Biome)
-├── postcss.config.mjs
-├── components.json             # shadcn/ui config
-├── src/
-│   ├── app/
-│   │   ├── globals.css         # Global Tailwind styles
-│   │   ├── layout.tsx          # Root layout
-│   │   ├── not-found.tsx       # 404 page
-│   │   ├── (external)/
-│   │   │   ├── landing/        # Landing page (public)
-│   │   │   └── page.tsx        # Root redirect
-│   │   └── (main)/
-│   │       ├── auth/           # Login page
-│   │       ├── unauthorized/   # Access denied
-│   │       └── dashboard/      # Main app (protected)
-│   │           ├── layout.tsx  # Sidebar, header, DatasetProvider
-│   │           ├── page.tsx    # Upload page (default)
-│   │           ├── data-preview/
-│   │           ├── cleaning/
-│   │           ├── data-cleaning/
-│   │           ├── descriptive-statistics/
-│   │           ├── analytics/
-│   │           ├── insights/
-│   │           ├── interpretation/
-│   │           ├── visualizations/
-│   │           ├── reports/
-│   │           ├── download/
-│   │           ├── upload-data/
-│   │           ├── crm/
-│   │           ├── logistics/
-│   │           ├── productivity/
-│   │           ├── academy/
-│   │           └── coming-soon/
-│   ├── components/
-│   │   ├── ui/                 # shadcn/ui components
-│   │   ├── visualizations/
-│   │   │   ├── highcharts-chart.tsx    # Dynamic Highcharts wrapper
-│   │   │   ├── ai-insight-panel.tsx    # AI insight display
-│   │   │   ├── viz-field-select.tsx    # Column selector for viz
-│   │   │   └── viz-page-shell.tsx      # Visualization page shell
-│   │   ├── empty-dataset.tsx
-│   │   ├── date-range-picker.tsx
-│   │   └── simple-icon.tsx
-│   ├── config/
-│   │   └── app-config.ts       # App metadata
-│   ├── context/
-│   │   └── dataset-context.tsx  # React context for dataset state
-│   ├── hooks/
-│   │   ├── use-dataset-columns.ts  # Fetch numeric/categorical columns
-│   │   └── use-mobile.ts
-│   ├── lib/
-│   │   ├── dataset-client.ts    # API client for dataset endpoints
-│   │   ├── insights-client.ts   # API client for AI insights
-│   │   ├── visualization-client.ts # API client for Highcharts config
-│   │   ├── reports-client.ts
-│   │   ├── cookie.client.ts
-│   │   ├── local-storage.client.ts
-│   │   ├── preferences/        # Sidebar layout preferences
-│   │   ├── fonts/
-│   │   └── utils.ts            # cn() helper (clsx + tailwind-merge)
-│   ├── navigation/
-│   │   └── sidebar/            # App sidebar navigation
-│   ├── proxy.ts                # Next.js middleware (route protection)
-│   ├── scripts/                # Build-time scripts (theme presets)
-│   ├── server/
-│   │   └── server-actions.ts   # Next.js server actions for preferences
-│   └── stores/
-│       ├── preferences/        # Zustand store for sidebar/theme
-│       └── upload/             # Zustand store for upload state
+backend/data/users/{user_id}/
+├── data_raw.pkl              # DataFrame original (pickle) — hasil upload pertama
+├── data_clean.pkl            # DataFrame setelah cleaning interaktif
+├── active_dataset.pkl        # Dataset yang sedang aktif (raw atau clean)
+├── active_dataset_meta.json  # Metadata: fileName, rows, columns, fileSize, uploadedAt
+└── upload_history.json       # Array 10 upload terakhir
 ```
 
-### Key Frontend Pages
+Format `active_dataset_meta.json`:
+```json
+{
+  "fileName": "sales_data.csv",
+  "rows": 5000,
+  "columns": 12,
+  "fileSize": 245760,
+  "uploadedAt": "2025-06-21T08:00:00Z"
+}
+```
 
-| Route | Component | Description |
-|---|---|---|
-| `/` | Root redirect | Redirects to `/landing` |
-| `/landing` | Landing page | Public landing page |
-| `/auth` | Login page | Email/password login form |
-| `/dashboard` | Upload page | Drag-and-drop file upload, format info |
-| `/dashboard/data-preview` | Dataset preview | Table view with column types, missing values |
-| `/dashboard/cleaning` | Cleaning | Cleaning diagnostics + action buttons |
-| `/dashboard/data-cleaning` | Interactive cleaning | Per-action cleaning (drop duplicates, impute, etc.) |
-| `/dashboard/descriptive-statistics` | Stats tables | Numeric & categorical stats |
-| `/dashboard/analytics` | Analytics | Charts, statistical analysis |
-| `/dashboard/visualizations` | Visualizations | Highcharts + AI chart recommendations |
-| `/dashboard/insights` | AI insights | Intelligent insight dashboard |
-| `/dashboard/interpretation` | Interpretation | Column-by-column AI analysis |
-| `/dashboard/reports` | Reports | Generate PDF/HTML report |
-| `/dashboard/download` | Export | Download CSV/XLSX/PDF |
+---
+
+## 🎨 Frontend Architecture
 
 ### State Management
 
-- **React Context** (`dataset-context.tsx`): Current dataset info (rows, columns, upload state)
-- **Zustand stores** (`stores/`): Upload history, sidebar/theme preferences
-- **Server Actions** (`server/server-actions.ts`): Persist sidebar layout preferences
-- **Next.js cookies**: Auth token, sidebar state
+Tiga layer state management digunakan secara bersamaan:
+
+| Layer | Implementasi | Kegunaan |
+|---|---|---|
+| **React Context** | `dataset-context.tsx` | Dataset info global (rows, columns, upload state) |
+| **Zustand** | `stores/upload/`, `stores/preferences/` | Upload history, sidebar & theme preferences |
+| **Server Actions** | `server/server-actions.ts` | Persist sidebar layout preferences ke cookies |
+| **Next.js cookies** | `proxy.ts` + `cookie.client.ts` | Auth token (`eda_session_token`), sidebar state |
+
+---
 
 ### Visualization Architecture
 
-```
-User selects column(s) and chart type
-    │
-    ▼
-POST /api/visualization/numerical (or categorical/bivariate/time-series)
-    │
-    ▼
-Backend generates Highcharts JSON config:
-    {
-      chart: { type, zoomType },
-      title: { text },
-      xAxis: { categories },
-      yAxis: { title },
-      series: [{ name, data }],
-      ...
-    }
-    │
-    ▼
-Frontend renders via highcharts-react-official
-    (dynamic import with lazy loading)
+`HighchartsChart` component menggunakan **dynamic import** + **singleton promise pattern**:
+
+```typescript
+// singleton pattern: modul Highcharts hanya di-load sekali
+let highchartsPromise: Promise<typeof Highcharts> | null = null;
+
+function loadHighcharts() {
+  if (!highchartsPromise) {
+    highchartsPromise = import('highcharts').then(async (HC) => {
+      await import('highcharts/modules/heatmap');
+      await import('highcharts/modules/exporting');
+      // ... module lain
+      return HC.default;
+    });
+  }
+  return highchartsPromise;
+}
 ```
 
-The `HighchartsChart` component uses **dynamic imports** with a singleton promise pattern to load Highcharts modules only once.
+Ini mencegah double-loading dan **race condition** saat multiple chart dirender bersamaan.
+
+---
 
 ### Route Protection
 
-The `proxy.ts` middleware checks for `eda_session_token` cookie on `/dashboard/*` routes and redirects to `/landing` if missing.
+`proxy.ts` (Next.js Middleware) melindungi semua rute `/dashboard/*`:
 
----
-
-## API Endpoints
-
-### Auth
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/auth/login` | Login, sets `eda_session_token` cookie |
-| GET | `/api/auth/me` | Get current user info from cookie |
-| POST | `/api/auth/logout` | Clear cookie |
-
-### Dataset
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/current-dataset` | Get active dataset metadata + preview + column lists |
-| POST | `/api/upload` | Upload file (CSV/XLSX/JSON/TXT), saves to user storage |
-| POST | `/api/data/analyze` | Upload → parse → save → run full EDA pipeline |
-| GET | `/api/data/analyze` | Auto-fetch EDA diagnostics for existing dataset |
-| GET | `/api/data/me` | Check if user has raw/clean data |
-| GET | `/api/data/ai-schema` | AI-powered column classification with Gemini/Groq fallback |
-| POST | `/api/data/chart-render` | Statistical computation engine for 4 scopes (univariate, bivariate, multivariate, timeseries) |
-| POST | `/api/reset` | Reset/delete all user datasets |
-
-### Cleaning
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/data/clean` | Interactive cleaning (drop_duplicates, impute_mean, impute_median, impute_mode, drop_missing_rows, standardize_text) |
-| GET | `/api/data/cleaning-summary` | Cleaning diagnostics with per-column missing values |
-| POST | `/api/data/execute-cleaning` | Execute cleaning action (drop_duplicates, impute_missing, reset_raw) |
-
-### Analysis
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/analysis/numeric` | Numeric descriptive statistics |
-| POST | `/api/analysis/categorical` | Categorical descriptive statistics |
-| POST | `/api/preview` | Dataset preview (first 10 rows) |
-| GET | `/api/insights` | 7-category intelligent insights |
-| GET | `/api/interpretation` | Column-by-column AI interpretation |
-| GET | `/api/reports` | Full report data |
-
-### Visualization
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/visualization/numerical` | Numerical chart config (histogram, boxplot) |
-| POST | `/api/visualization/categorical` | Categorical chart config (bar chart, pie chart) |
-| POST | `/api/visualization/bivariate` | Bivariate chart config (scatter, heatmap, stacked bar, box plot) |
-| POST | `/api/visualization/time-series` | Time series line chart config |
-
-### Insights
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/insights/univariate` | AI insight for a single column |
-| POST | `/api/insights/bivariate` | AI insight for column pair relationship |
-| POST | `/api/insights/text` | Generic AI insight from raw stats |
-| POST | `/api/insights/recommend-chart` | AI chart recommendation for a column |
-
-### Reports & Export
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/export/report` | Text report with AI insights |
-| POST | `/api/reports/generate` | Generate PDF or HTML report with selected sections |
-| GET | `/api/download/csv` | Download dataset as CSV |
-| GET | `/api/download/xlsx` | Download dataset + stats as XLSX |
-| GET | `/api/download/pdf` | Download dataset report as PDF |
-
-### History
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/data/history` | Last 10 uploads for current user |
-| POST | `/api/data/restore` | Restore a dataset from history |
-| DELETE | `/api/data/history` | Delete a dataset from history + backups |
-
-### Health
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/` | Health check + user dataset status |
-
----
-
-## Data Flow
-
-### Upload → Analysis Flow
-
-```
-1. User drags file onto upload dropzone
-2. Frontend POSTs to /api/data/analyze (multipart upload)
-3. Backend:
-   a. Reads file bytes → parses via _parse_uploaded_bytes()
-      - CSV: tries utf-8-sig, utf-8, latin-1, cp1252
-      - XLSX: openpyxl
-      - TXT: tries tab, then comma
-      - JSON: array of objects or column-oriented object
-   b. Saves raw bytes to user's data directory
-   c. Pickles DataFrame to active_dataset.pkl
-   d. Creates backup of any existing raw file
-   e. Runs _run_eda() pipeline:
-      - _compute_dataset_meta()
-      - _compute_summary_stats()
-      - _compute_pearson_matrix()
-      - _compute_cramers_v_matrix()
-   f. Returns JSON with summary_stats, pearson_matrix,
-      cramers_v_matrix, dataset_meta, data_preview
-4. Frontend receives response → updates DatasetContext
-5. User navigates to data-preview, cleaning, statistics, etc.
-```
-
-### Cleaning Flow
-
-```
-1. GET /api/data/analyze → load existing clean/raw data
-2. POST /api/data/clean { action: "drop_duplicates" }
-   (or impute_mean/median/mode, drop_missing_rows, standardize_text)
-3. Backend:
-   a. Loads from data_clean.pkl (fallback to data_raw.pkl)
-   b. Applies cleaning operation
-   c. Saves to data_clean.pkl AND active_dataset.pkl
-   d. Updates metadata with new row/column counts
-   e. Returns changes summary
-```
-
-### Visualization Flow
-
-```
-1. Frontend fetches numeric_columns / categorical_columns from /api/current-dataset
-2. User selects column(s) and chart type
-3. Frontend POSTs to visualization endpoint (form data):
-   - /api/visualization/numerical?col=X&chart_type=histogram
-   - /api/visualization/categorical?col=Y&chart_type=piechart
-   - /api/visualization/bivariate?x_col=X&y_col=Y&chart_type=scatter
-   - /api/visualization/time-series?date_col=D&value_col=V
-4. Backend generates Highcharts-compatible JSON config
-5. Frontend renders via <HighchartsChart options={...} />
-```
-
-### AI Insight Flow
-
-```
-1. POST /api/insights/univariate { col: "Salary", type: "numerical" }
-2. Backend:
-   a. Calls describe_numeric() to compute stats
-   b. Passes stats to generate_ai_insight(stats, "univariate_numerical")
-   c. AI Engine:
-      - If GEMINI_API_KEY set: call Gemini 1.5 Flash
-      - Else if GROQ_API_KEY set: call Llama 3.1-70b via Groq
-      - Else: use _fallback_numerical(stats) → rule-based interpretation
-   d. Returns { stats, insight }
+```typescript
+// Middleware logic (pseudocode)
+if (pathname.startsWith('/dashboard')) {
+  const token = request.cookies.get('eda_session_token');
+  if (!token) {
+    return NextResponse.redirect('/landing');
+  }
+}
 ```
 
 ---
 
-## Prasyarat
+## 🔐 Authentication
 
-- Python 3.10+ (disarankan)
-- Node.js 18+
+Menggunakan **JWT (HS256)** dengan **httpOnly cookies**:
 
-## Cara Menjalankan
+- **Cookie name:** `eda_session_token`
+- **Expiry:** 7 hari
+- **Algorithm:** HS256
 
-### 1) Jalankan Backend (FastAPI)
+Akun yang tersedia (hardcoded untuk demo):
 
-```bat
+```python
+USERS_DB = [
+    {"id": "1", "email": "hello@arhamkhnz.com", "password": "admin123", "role": "administrator"},
+    {"id": "2", "email": "hello@ammarkhnz.com", "password": "admin123", "role": "admin"},
+    {"id": "3", "email": "test@test.com",        "password": "test123",  "role": "user"},
+]
+```
+
+Semua endpoint protected menggunakan `Depends(require_user_id)` yang:
+1. Baca cookie `eda_session_token` dari request
+2. Decode & verifikasi JWT dengan `AUTH_SECRET_KEY`
+3. Ekstrak `user_id` dari payload
+4. Inject `user_id` ke handler function
+
+---
+
+## 🐳 Docker (Backend)
+
+Backend menggunakan Docker untuk deployment ke **Hugging Face Spaces**.
+
+`backend/Dockerfile`:
+```dockerfile
+FROM python:3.10-slim
+
+# Non-root user (Hugging Face Spaces requirement)
+RUN useradd -m -u 1000 user
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY --chown=user:user . /app
+USER user
+
+RUN mkdir -p /app/data/users
+
+# Port 7860 = standar Hugging Face Spaces
+EXPOSE 7860
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+```
+
+Build & run lokal dengan Docker:
+```bash
 cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload
+docker build -t automationeda-backend .
+docker run -p 8000:7860 \
+  -e AUTH_SECRET_KEY=your-secret \
+  -e GEMINI_API_KEY=your-key \
+  automationeda-backend
 ```
 
-Backend: `http://localhost:8000`
+---
 
-### 2) Jalankan Frontend (Next.js)
+## 🚢 Deployment
 
-```bat
-cd frontend
-npm install
-npm run dev
-```
+### Frontend → Vercel
 
-Frontend: `http://localhost:3000`
+1. Push kode ke GitHub
+2. Import repository di [vercel.com](https://vercel.com)
+3. Set **Root Directory** ke `frontend`
+4. Tambahkan Environment Variable:
+   ```
+   NEXT_PUBLIC_API_URL = https://your-hf-space.hf.space
+   ```
+5. Deploy otomatis saat push ke `main`
 
-### Environment Variables (backend/.env)
+### Backend → Hugging Face Spaces
 
-| Variable | Description |
+1. Buat Space baru di [huggingface.co/spaces](https://huggingface.co/spaces) (pilih **Docker** SDK)
+2. Push folder `backend/` ke repository Space tersebut
+3. Tambahkan **Secrets** di Settings Space:
+   ```
+   AUTH_SECRET_KEY = your-production-secret
+   GEMINI_API_KEY  = your-gemini-key
+   GROQ_API_KEY    = your-groq-key
+   ```
+4. Space akan otomatis build & deploy via `Dockerfile`
+
+---
+
+## 🛠️ Development Tools
+
+| Tool | Kegunaan |
 |---|---|
-| `AUTH_SECRET_KEY` | JWT signing key (default: `automationeda-secret-key-2025`) |
-| `GEMINI_API_KEY` | Google Gemini API key for AI insights |
-| `GROQ_API_KEY` | Groq API key (fallback if Gemini unavailable) |
+| **Biome** | Linter & formatter untuk TypeScript/JavaScript (`npm run check`) |
+| **Husky** | Git hooks (jalankan Biome check sebelum commit) |
+| **lint-staged** | Hanya lint file yang berubah saat commit |
+| **Swagger UI** | Dokumentasi API interaktif di `http://localhost:8000/docs` |
+| **React Compiler** | Enabled di `next.config.mjs` untuk otomatis optimasi React renders |
 
-## File Dataset
+### Useful Commands
 
-Dataset disimpan per-user di folder `backend/data/users/{user_id}/` dalam format pickle (`.pkl`) untuk status sesi/analisis lanjutan.
+```bash
+# Frontend
+npm run dev          # Start development server
+npm run build        # Build production bundle
+npm run check        # Run Biome linter
+npm run check:fix    # Auto-fix Biome lint issues
+npm run format       # Format code dengan Biome
+
+# Backend
+uvicorn main:app --reload          # Dev server dengan hot-reload
+uvicorn main:app --host 0.0.0.0    # Server untuk LAN/container
+python -m pytest                   # Run unit tests (jika ada)
+```
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See [`frontend/LICENSE`](frontend/LICENSE) for more information.
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the AutomationEDA Team**
+
+[![Live Demo](https://img.shields.io/badge/🌐%20Try%20it%20Now-automationeda.vercel.app-6366f1?style=for-the-badge)](https://automationeda.vercel.app)
+
+</div>
