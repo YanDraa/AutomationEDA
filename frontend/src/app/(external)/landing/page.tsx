@@ -46,6 +46,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BACKEND_URL } from "@/lib/api-config";
 
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -576,7 +577,7 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/auth/login", {
+      const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -30,9 +30,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { HighchartsChart } from "@/components/visualizations/highcharts-chart";
 import type { HighchartsOptions } from "@/lib/visualization-client";
+import { BACKEND_URL } from "@/lib/api-config";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const API_BASE = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 
 type ColumnClassification = {
   type: "Categorical (Qualitative)" | "Discrete Numeric" | "Continuous Numeric";

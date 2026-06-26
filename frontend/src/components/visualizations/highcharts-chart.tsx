@@ -21,12 +21,137 @@ function loadChartLib(): Promise<ChartLib> {
       // Highcharts 12+: modules self-register on import (do not call as functions)
       await import("highcharts/highcharts-more");
       await import("highcharts/modules/heatmap");
+      await import("highcharts/modules/pareto");
+      // No explicit registration needed for Highcharts 12+
       const { default: HighchartsReact } = await import("highcharts-react-official");
       return { Highcharts, HighchartsReact };
     })();
   }
   return modulesPromise;
 }
+
+function deepMerge(target: any, source: any): any {
+  if (!source) return target;
+  if (!target) return source;
+
+  if (Array.isArray(source)) {
+    if (!Array.isArray(target)) return source;
+    return target.map((item, idx) => {
+      if (idx < source.length) {
+        return deepMerge(item, source[idx]);
+      }
+      return item;
+    });
+  }
+
+  if (typeof source === "object") {
+    if (typeof target !== "object" || target === null) return source;
+    const output = { ...target };
+    for (const key of Object.keys(source)) {
+      if (key in target) {
+        output[key] = deepMerge(target[key], source[key]);
+      } else {
+        output[key] = source[key];
+      }
+    }
+    return output;
+  }
+
+  return source;
+}
+
+const themePresetOptions = {
+  colors: [
+    "#3b82f6", // Blue
+    "#10b981", // Emerald
+    "#f59e0b", // Amber
+    "#ef4444", // Red
+    "#8b5cf6", // Purple
+    "#06b6d4", // Cyan
+    "#ec4899", // Pink
+    "#f97316"  // Orange
+  ],
+  title: {
+    style: {
+      color: "var(--foreground)",
+      fontFamily: "var(--font-sans)",
+      fontWeight: "600",
+    }
+  },
+  subtitle: {
+    style: {
+      color: "var(--muted-foreground)",
+      fontFamily: "var(--font-sans)",
+    }
+  },
+  xAxis: {
+    gridLineColor: "var(--border)",
+    lineColor: "var(--border)",
+    tickColor: "var(--border)",
+    title: {
+      style: {
+        color: "var(--muted-foreground)",
+        fontFamily: "var(--font-sans)",
+      }
+    },
+    labels: {
+      style: {
+        color: "var(--muted-foreground)",
+        fontFamily: "var(--font-sans)",
+      }
+    }
+  },
+  yAxis: {
+    gridLineColor: "var(--border)",
+    lineColor: "var(--border)",
+    tickColor: "var(--border)",
+    title: {
+      style: {
+        color: "var(--muted-foreground)",
+        fontFamily: "var(--font-sans)",
+      }
+    },
+    labels: {
+      style: {
+        color: "var(--muted-foreground)",
+        fontFamily: "var(--font-sans)",
+      }
+    }
+  },
+  tooltip: {
+    backgroundColor: "var(--card)",
+    borderColor: "var(--border)",
+    style: {
+      color: "var(--foreground)",
+      fontFamily: "var(--font-sans)",
+    }
+  },
+  plotOptions: {
+    boxplot: {
+      lineColor: "var(--foreground)",
+      fillColor: "var(--muted)",
+      stemColor: "var(--foreground)",
+      whiskerColor: "var(--foreground)",
+    },
+    column: {
+      borderColor: "var(--border)",
+    },
+    heatmap: {
+      borderColor: "var(--border)",
+      dataLabels: {
+        style: {
+          color: "var(--foreground)",
+          textOutline: "none",
+        }
+      }
+    },
+    bubble: {
+      minSize: "10%",
+      maxSize: "20%",
+      sizeBy: "area",
+    }
+  }
+};
 
 type HighchartsChartProps = {
   options: HighchartsOptions | null;
@@ -63,10 +188,13 @@ export function HighchartsChart({ options, className }: HighchartsChartProps) {
 
   const { Highcharts, HighchartsReact } = chartLib;
 
+  // Perform a deep merge with the theme options
+  const mergedOptions = deepMerge(options, themePresetOptions);
+
   const chartOptions: Highcharts.Options = {
-    ...options,
+    ...mergedOptions,
     chart: {
-      ...(options.chart as Highcharts.ChartOptions | undefined),
+      ...(mergedOptions.chart as Highcharts.ChartOptions | undefined),
       backgroundColor: "transparent",
     },
     credits: { enabled: false },

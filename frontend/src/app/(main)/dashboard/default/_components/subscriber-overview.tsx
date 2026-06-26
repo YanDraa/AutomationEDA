@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BACKEND_URL } from "@/lib/api-config";
 import { useDataset } from "@/context/dataset-context";
 
 import staticCustomers from "./data.json";
@@ -67,7 +68,7 @@ export function SubscriberOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch(`${BACKEND_URL}/api/current-dataset`, { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => setApiData(d))
       .catch(() => {});

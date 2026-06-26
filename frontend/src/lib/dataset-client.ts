@@ -22,8 +22,10 @@ export type CurrentDatasetResponse = {
 };
 
 
+import { BACKEND_URL } from "@/lib/api-config";
+
 export async function fetchCurrentDataset(): Promise<CurrentDatasetResponse | null> {
-  const res = await fetch("http://localhost:8000/api/current-dataset", {
+  const res = await fetch(`${BACKEND_URL}/api/current-dataset`, {
     method: "GET",
     headers: { "Accept": "application/json" },
     credentials: "include",

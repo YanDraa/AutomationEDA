@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectGroup, SelectItem,
   SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { BACKEND_URL } from "@/lib/api-config";
 import { useDataset } from "@/context/dataset-context";
 
 // ── Static fallback ───────────────────────────────────────────────────────────
@@ -79,7 +80,7 @@ export function PerformanceOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch(`${BACKEND_URL}/api/current-dataset`, { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => {
         setApiData(d);

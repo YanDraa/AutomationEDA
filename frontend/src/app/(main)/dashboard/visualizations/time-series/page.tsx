@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { AiInsightPanel } from "@/components/visualizations/ai-insight-panel";

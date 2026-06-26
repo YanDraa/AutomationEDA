@@ -3,6 +3,7 @@ from __future__ import annotations
 # ── Environment must be loaded FIRST before any other local imports ────────────
 import os
 from pathlib import Path
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 _ENV_PATH = Path(__file__).resolve().parent / ".env"
@@ -833,6 +834,7 @@ async def api_data_ai_schema(user_id: str = Depends(require_user_id)) -> Dict[st
 
         if gemini_key:
             try:
+                # pyrefly: ignore [missing-import]
                 import google.generativeai as genai
                 genai.configure(api_key=gemini_key)
                 model = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_instruction)
@@ -1162,13 +1164,31 @@ async def visualization_categorical(
 
 @app.post("/api/visualization/bivariate")
 async def visualization_bivariate(
-    x_col: str = Form(...), y_col: str = Form(...), chart_type: str = Form(...), file: Optional[UploadFile] = File(None),
+    x_col: str = Form(...), y_col: str = Form(...), chart_type: Optional[str] = Form(None), size_col: Optional[str] = Form(None), file: Optional[UploadFile] = File(None),
     user_id: str = Depends(require_user_id),
 ) -> Dict[str, Any]:
     try:
+
         df = _resolve_dataframe(file, user_id)
-        options = generate_bivariate_plot(df, x_col, y_col, chart_type)
-        return clean_json_payload({"status": "success", "chart_type": chart_type, "x_col": x_col, "y_col": y_col, "options": options})
+        # Infer chart_type if not provided based on column data types
+        inferred_chart_type = chart_type
+        if not inferred_chart_type:
+            # Determine numeric status of columns
+            is_x_num = pd.api.types.is_numeric_dtype(df[x_col])
+            is_y_num = pd.api.types.is_numeric_dtype(df[y_col])
+            is_size_num = False
+            if size_col:
+                is_size_num = pd.api.types.is_numeric_dtype(df[size_col])
+            if is_x_num and is_y_num and is_size_num:
+                inferred_chart_type = "bubble"
+            elif is_x_num and is_y_num:
+                inferred_chart_type = "scatter"
+            elif not is_x_num and not is_y_num:
+                inferred_chart_type = "heatmap-crosstab"
+            else:
+                inferred_chart_type = "bar-aggregation"
+        options = generate_bivariate_plot(df, x_col, y_col, inferred_chart_type, size_col)
+        return clean_json_payload({"status": "success", "chart_type": inferred_chart_type, "x_col": x_col, "y_col": y_col, "options": options})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:

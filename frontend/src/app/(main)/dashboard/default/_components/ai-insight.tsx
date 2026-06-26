@@ -5,6 +5,7 @@ import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BACKEND_URL } from "@/lib/api-config";
 import { useDataset } from "@/context/dataset-context";
 
 type ColInsight = { column: string; type: string; insight: string };
@@ -49,7 +50,7 @@ export function AiInsight() {
     if (!dataset) return;
     setLoading(true);
     setError(null);
-    fetch("http://localhost:8000/api/interpretation", { credentials: "include" })
+    fetch(`${BACKEND_URL}/api/interpretation`, { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => {
         if (d.status === "success" && d.result) setResult(d.result);

@@ -4,6 +4,8 @@ import type React from "react";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
+import { BACKEND_URL } from "@/lib/api-config";
+
 export type DatasetInfo = {
   fileName: string;
   rows: number;
@@ -44,7 +46,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
 
   const refreshDataset = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/data/me", {
+      const res = await fetch(`${BACKEND_URL}/api/data/me`, {
         credentials: "include",
       });
       if (!res.ok) { setDatasetState(null); return; }
@@ -103,7 +105,7 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
   const form = new FormData();
   form.append("file", file);
 
-  const res = await fetch("http://localhost:8000/api/upload", {
+  const res = await fetch(`${BACKEND_URL}/api/upload`, {
     method: "POST",
     body: form,
     credentials: "include",

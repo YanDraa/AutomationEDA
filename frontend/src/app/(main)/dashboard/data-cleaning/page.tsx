@@ -29,10 +29,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { BACKEND_URL } from "@/lib/api-config";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 const NOTIFICATION_DURATION = 3_000;
 
 type CleanAction =

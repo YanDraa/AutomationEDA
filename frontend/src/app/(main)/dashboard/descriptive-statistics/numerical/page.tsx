@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDataset } from "@/context/dataset-context";
+import { BACKEND_URL } from "@/lib/api-config";
 
-const BACKEND_URL = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 
 interface NumericStats {
   [column: string]: {
@@ -71,7 +72,7 @@ export default function Page() {
 
     (async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/analysis/numeric`, {
+        const res = await fetch(`${API_BASE}/api/analysis/numeric`, {
           method: "POST",
           headers: { Accept: "application/json" },
           credentials: "include",

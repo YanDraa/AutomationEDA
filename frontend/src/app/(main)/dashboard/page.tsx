@@ -123,11 +123,10 @@ export default function Page() {
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
-                className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
-                  isDragging
-                    ? "border-primary bg-primary/5 scale-[1.01]"
-                    : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
-                }`}
+                className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${isDragging
+                  ? "border-primary bg-primary/5 scale-[1.01]"
+                  : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
+                  }`}
               >
                 <input
                   aria-label="Upload dataset"
@@ -241,13 +240,12 @@ export default function Page() {
               ].map((step, i) => (
                 <div key={step} className="flex items-center gap-2 text-sm">
                   <div
-                    className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                      i === 0 && successFile
-                        ? "bg-green-500 text-white"
-                        : i === 0
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${i === 0 && successFile
+                      ? "bg-green-500 text-white"
+                      : i === 0
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     {i === 0 && successFile ? "✓" : i + 1}
                   </div>

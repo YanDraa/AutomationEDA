@@ -24,10 +24,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BACKEND_URL } from "@/lib/api-config";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -13,6 +13,7 @@ Aplikasi **EDA otomatis** (Exploratory Data Analysis) yang menerima file dataset
 - [Data Flow](#data-flow)
 - [Prasyarat](#prasyarat)
 - [Cara Menjalankan](#cara-menjalankan)
+- [Deployment](#deployment)
 
 ---
 
@@ -520,7 +521,81 @@ Frontend: `http://localhost:3000`
 | `AUTH_SECRET_KEY` | JWT signing key (default: `automationeda-secret-key-2025`) |
 | `GEMINI_API_KEY` | Google Gemini API key for AI insights |
 | `GROQ_API_KEY` | Groq API key (fallback if Gemini unavailable) |
+| `FRONTEND_ORIGIN` | CORS allowed origin(s) (comma-separated). Default: `http://localhost:3000`. For production: `https://your-app.vercel.app` |
+
+### Frontend Environment Variables (frontend/.env.local)
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_BACKEND_URL` | Backend API URL. Default: `http://localhost:8000`. For production: `https://your-app.onrender.com` |
 
 ## File Dataset
 
 Dataset disimpan per-user di folder `backend/data/users/{user_id}/` dalam format pickle (`.pkl`) untuk status sesi/analisis lanjutan.
+
+---
+
+## Deployment
+
+### Deploy Backend ke Render
+
+1. **Buat akun** di [render.com](https://render.com) (GitHub login)
+
+2. **Buat Web Service** baru:
+   - Hubungkan repository GitHub AutomationEDA
+   - **Name:** `automationeda-api` (atau sesuai keinginan)
+   - **Environment:** `Python 3`
+   - **Build Command:**
+     ```bash
+     pip install -r requirements.txt
+     ```
+   - **Start Command:**
+     ```bash
+     uvicorn main:app --host 0.0.0.0 --port $PORT
+     ```
+   - **Root Directory:** `backend`
+
+3. **Set Environment Variables** di Render dashboard:
+   - `AUTH_SECRET_KEY` → (isi dengan secret key, bisa pakai default atau generate baru)
+   - `GEMINI_API_KEY` → (opsional, jika pakai AI insight)
+   - `GROQ_API_KEY` → (opsional, fallback AI)
+   - `FRONTEND_ORIGIN` → `https://your-app.vercel.app` (URL Vercel kamu setelah deploy)
+   - `PYTHON_VERSION` → `3.11.7`
+
+4. **Persistent Disk** (Render):
+   - Karena dataset disimpan sebagai file pickle di `backend/data/users/`, kamu perlu menambahkan **Persistent Disk** di Render:
+     - **Mount path:** `/data/users`
+     - **Size:** 1 GB (cukup untuk development)
+   - Kemudian update environment variable `EDA_DATA_DIR=/data/users` atau sesuaikan kode `utils.py` agar path data mengarah ke persistent disk.
+   
+   > **Catatan:** Render tidak menyimpan file antar deployment restart. Untuk production yang sesungguhnya, gunakan penyimpanan cloud (S3, R2, etc) atau database. Untuk demo/UAS, persistent disk sudah mencukupi.
+
+5. **Deploy:** Render akan otomatis build dan deploy. Dapatkan URL backend (misal: `https://automationeda-api.onrender.com`).
+
+### Deploy Frontend ke Vercel
+
+1. **Buat akun** di [vercel.com](https://vercel.com) (GitHub login)
+
+2. **Import repository** AutomationEDA ke Vercel:
+   - **Framework Preset:** Next.js
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `.next`
+
+3. **Set Environment Variables** di Vercel dashboard:
+   - `NEXT_PUBLIC_BACKEND_URL` → `https://automationeda-api.onrender.com` (URL Render backend kamu)
+
+4. **Deploy:** Vercel akan otomatis build dan deploy. Dapatkan URL frontend (misal: `https://automationeda.vercel.app`).
+
+5. **Update CORS di Backend:** Setelah frontend terdeploy, update environment variable `FRONTEND_ORIGIN` di Render menjadi URL Vercel kamu, lalu Redeploy backend.
+
+### Catatan Penting
+
+| Aspek | Detail |
+|---|---|
+| **File Storage** | Render persistent disk bersifat opsional. Untuk demo, data akan hilang saat restart. |
+| **JWT Secret** | Ganti `AUTH_SECRET_KEY` dengan key yang aman untuk production. |
+| **AI API Key** | Tanpa `GEMINI_API_KEY`, insight AI akan menggunakan fallback rule-based engine. |
+| **CORS** | Pastikan `FRONTEND_ORIGIN` di backend berisi URL Vercel yang benar. |
+| **Domain** | Jika pakai custom domain, update kedua environment variable. |
+

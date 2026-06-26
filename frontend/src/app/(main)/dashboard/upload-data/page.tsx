@@ -32,10 +32,11 @@ import {
   type HistoryEntry,
   UploadHistory,
 } from "./upload-history";
+import { BACKEND_URL } from "@/lib/api-config";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".txt", ".json"] as const;
 type AcceptedExt = (typeof ACCEPTED_EXTENSIONS)[number];

@@ -1,8 +1,17 @@
 {
+<<<<<<< HEAD
   "fileName": "Survey Persepsi Mahasiswa (Responses) - Form Responses 1.csv",
   "originalFilename": "Survey Persepsi Mahasiswa (Responses) - Form Responses 1.csv",
   "rows": 73,
   "columns": 15,
   "fileSize": "13.70 KB",
   "uploadedAt": "2026-06-15T05:30:51.547084+00:00"
+=======
+  "fileName": "Dataset_Kesehatan_15000_Data.xlsx",
+  "originalFilename": "Dataset_Kesehatan_15000_Data.xlsx",
+  "rows": 15000,
+  "columns": 13,
+  "fileSize": "814.21 KB",
+  "uploadedAt": "2026-06-16T09:16:04.349040+00:00"
+>>>>>>> d4790b55d14912a6feedfa32fa074faa52e74566
 }

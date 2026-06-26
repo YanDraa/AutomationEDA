@@ -38,10 +38,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { BACKEND_URL } from "@/lib/api-config";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = BACKEND_URL;
 
 type MissingAction = "impute_mean" | "impute_median" | "impute_mode" | "drop_missing_rows";
 type BulkAction = "drop_duplicates" | "reset_raw";

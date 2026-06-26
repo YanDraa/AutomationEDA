@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BACKEND_URL } from "@/lib/api-config";
 import { useDataset } from "@/context/dataset-context";
 
 type ApiCol  = { name: string; type: string; missing: number };
@@ -27,7 +28,7 @@ export function DatasetComposition() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("http://localhost:8000/api/current-dataset", { credentials: "include" })
+    fetch(`${BACKEND_URL}/api/current-dataset`, { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});

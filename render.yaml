@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: automationeda-api
+    runtime: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: AUTH_SECRET_KEY
+        value: automationeda-secret-key-2025
+      - key: FRONTEND_ORIGIN
+        value: http://localhost:3000
+      - key: PYTHON_VERSION
+        value: 3.11.7
+    disk:
+      name: eda-data
+      mountPath: /data
+      sizeGB: 1

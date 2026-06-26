@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDataset } from "@/context/dataset-context";
+import { BACKEND_URL } from "@/lib/api-config";
 
 interface UserProfile {
   id: string;
@@ -33,7 +34,7 @@ export function ProfileMenu() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/auth/me", {
+        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
           credentials: "include",
         });
         if (res.ok) {
@@ -48,7 +49,7 @@ export function ProfileMenu() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8000/api/auth/logout", {
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
