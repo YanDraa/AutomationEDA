@@ -1,0 +1,27 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files (set via Railway dashboard)
+.env
+.env.local
+.env.example
+
+# Local dataset files (will be stored in Railway Volume)
+data/
+struktur.txt
+backend.txt
+
+# Railway & Fly config (not needed in image)
+fly.toml
+
+# IDE
+.vscode/
+.idea/

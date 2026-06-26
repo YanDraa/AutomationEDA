@@ -1,23 +1,23 @@
 [
   {
-    "fileName": "employee_raw_dataset.csv",
-    "uploadedAt": "2026-06-13T11:16:53.559268+00:00",
-    "rows": 510,
-    "columns": 13,
-    "fileSize": 35326
+    "fileName": "amazon.csv",
+    "uploadedAt": "2026-06-15T05:05:54.822163+00:00",
+    "rows": 1465,
+    "columns": 16,
+    "fileSize": 4744481
   },
   {
-    "fileName": "01_data.csv",
-    "uploadedAt": "2026-06-13T11:17:33.600464+00:00",
-    "rows": 1826,
-    "columns": 6,
-    "fileSize": 90204
+    "fileName": "amazon.csv",
+    "uploadedAt": "2026-06-15T05:29:58.530059+00:00",
+    "rows": 1465,
+    "columns": 16,
+    "fileSize": 4744481
   },
   {
-    "fileName": "hasil_gabungan.csv",
-    "uploadedAt": "2026-06-14T12:10:54.867595+00:00",
-    "rows": 9130,
-    "columns": 6,
-    "fileSize": 414032
+    "fileName": "Survey Persepsi Mahasiswa (Responses) - Form Responses 1.csv",
+    "uploadedAt": "2026-06-15T05:30:51.548028+00:00",
+    "rows": 73,
+    "columns": 15,
+    "fileSize": 14025
   }
 ]

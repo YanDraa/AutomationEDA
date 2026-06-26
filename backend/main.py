@@ -85,11 +85,12 @@ _CLEAN_PKL = CLEAN_DATASET_PKL
 # ─────────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Automation EDA API")
 
-FRONTEND_ORIGIN = "http://localhost:3000"
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+CORS_ORIGINS = [origin.strip() for origin in FRONTEND_ORIGIN.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
