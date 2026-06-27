@@ -4,9 +4,7 @@ import { BACKEND_URL } from "@/lib/config";
 
 import { useCallback, useEffect, useState } from "react";
 
-
-
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Hash, Sparkles, Database } from "lucide-react";
 
 import { EmptyDataset } from "@/components/empty-dataset";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDataset } from "@/context/dataset-context";
-
-
 
 interface NumericStats {
   [column: string]: {
@@ -64,7 +60,6 @@ export default function Page() {
   const [stats, setStats] = useState<NumericStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // file re-upload UI removed (server-cached dataset used)
 
   useEffect(() => {
     if (!dataset) return;
@@ -77,7 +72,6 @@ export default function Page() {
           method: "POST",
           headers: { Accept: "application/json" },
           credentials: "include",
-          // No file uploaded; backend will fallback to server-cached dataset
           body: undefined,
         });
         if (!res.ok) throw new Error();
@@ -104,15 +98,11 @@ export default function Page() {
     })();
   }, [dataset]);
 
-
-
-
-
   if (!dataset) {
     return (
       <EmptyDataset
-        title="No dataset loaded"
-        description="Upload a file first to view numerical statistics."
+        title="Belum ada dataset yang dimuat"
+        description="Unggah file terlebih dahulu untuk melihat statistik numerikal."
       />
     );
   }
@@ -120,67 +110,87 @@ export default function Page() {
   const columns = stats ? Object.keys(stats) : [];
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-semibold text-2xl">Statistik Numerikal</h1>
-          <p className="mt-1 text-muted-foreground text-sm">Dataset: <span className="font-medium text-foreground">{dataset.fileName}</span></p>
+    <div className="flex min-w-0 w-full flex-col gap-6 p-1">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
+            <Hash className="size-6 text-blue-500" />
+            Statistik Numerikal
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Dataset: <span className="font-semibold text-foreground">{dataset.fileName}</span>
+          </p>
         </div>
-        <div />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm">
-          <AlertCircle className="size-4 shrink-0" />{error}
+        <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive text-sm font-medium break-words">
+          <AlertCircle className="size-4 shrink-0" />
+          {error}
         </div>
       )}
 
       {loading && (
-        <Card><CardContent className="flex flex-col gap-3 pt-6">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</CardContent></Card>
+        <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+          <CardContent className="flex flex-col gap-3 pt-6 pb-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded-xl" />
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {stats && !loading && columns.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground text-sm">
-            Tidak ada kolom numerikal (int64/float64) pada dataset ini.
+        <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+          <CardContent className="py-12 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
+            <Database className="size-8 opacity-40" />
+            <p>Tidak ada kolom numerikal (int64/float64) pada dataset ini.</p>
           </CardContent>
         </Card>
       )}
 
       {stats && !loading && columns.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ringkasan Statistik</CardTitle>
-            <CardDescription>{columns.length} kolom numerikal ditemukan</CardDescription>
+        <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+          <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 rounded-t-2xl">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Sparkles className="size-4 text-blue-500" />
+              Matriks Ringkasan Statistik Numerikal
+            </CardTitle>
+            <CardDescription className="text-xs">{columns.length} kolom numerikal terdeteksi</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-card">Statistik</TableHead>
+          <CardContent className="p-0">
+            <div className="w-full overflow-x-auto max-h-[600px]">
+              <Table className="w-full text-xs">
+                <TableHeader className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs shadow-xs">
+                  <TableRow className="border-b border-border/40 hover:bg-transparent">
+                    <TableHead className="sticky left-0 z-30 bg-background/95 backdrop-blur-xs font-bold text-foreground min-w-36 px-4 py-3 border-r border-border/20">
+                      Metrik Statistik
+                    </TableHead>
                     {columns.map((col) => (
-                      <TableHead key={col} className="whitespace-nowrap text-center">{col}</TableHead>
+                      <TableHead key={col} className="whitespace-nowrap text-center font-bold text-foreground px-4 py-3 min-w-32">
+                        {col}
+                      </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Object.keys(STAT_LABELS).map((stat) => (
-                    <TableRow key={stat}>
-                      <TableCell className="sticky left-0 bg-card font-medium text-sm whitespace-nowrap">
+                    <TableRow key={stat} className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5">
+                      <TableCell className="sticky left-0 z-10 bg-background/90 font-bold text-xs text-foreground min-w-36 px-4 py-2.5 border-r border-border/20">
                         {STAT_LABELS[stat]}
                       </TableCell>
                       {columns.map((col) => {
                         const val = (stats[col] as Record<string, unknown>)[stat];
                         if (stat === "distribution") {
                           return (
-                            <TableCell key={col} className="text-center">
+                            <TableCell key={col} className="text-center px-4 py-2.5">
                               <Badge
                                 variant="outline"
-                                className={val === "Normal"
-                                  ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
-                                  : "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
-                                }
+                                className={`text-[10px] py-0.5 px-2 font-bold ${
+                                  val === "Normal"
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                    : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                }`}
                               >
                                 {String(val)}
                               </Badge>
@@ -189,16 +199,16 @@ export default function Page() {
                         }
                         if (stat === "n_outliers") {
                           return (
-                            <TableCell key={col} className="text-center">
-                              <span className={Number(val) > 0 ? "font-medium text-orange-600 dark:text-orange-400" : ""}>
+                            <TableCell key={col} className="text-center px-4 py-2.5">
+                              <span className={`font-bold tabular-nums ${Number(val) > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
                                 {String(val ?? "-")}
                               </span>
                             </TableCell>
                           );
                         }
                         return (
-                          <TableCell key={col} className="text-center text-sm">
-                            {val === null || val === undefined ? <span className="text-muted-foreground">-</span> : String(val)}
+                          <TableCell key={col} className="text-center text-xs tabular-nums text-foreground/80 px-4 py-2.5">
+                            {val === null || val === undefined ? <span className="text-muted-foreground/40">-</span> : String(val)}
                           </TableCell>
                         );
                       })}
