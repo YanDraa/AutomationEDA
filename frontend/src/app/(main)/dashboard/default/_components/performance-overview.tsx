@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useDataset } from "@/context/dataset-context";
 
-// â”€â”€ Static fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Static fallback ───────────────────────────────────────────────────────────
 
 const STATIC_VALUES = [
   { newCustomers: 23840, activeAccounts: 6630, returningUsers: 4880 },
@@ -44,7 +44,7 @@ const STATIC_CONFIG = {
   returningUsers: { label: "Returning Users", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 // Sanitize kolom name jadi key CSS-variable-safe (hapus karakter non-alphanumeric)
 function toKey(col: string) {
@@ -63,7 +63,7 @@ function buildChartData(rows: Record<string, unknown>[], c1: string, c2: string,
   }));
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
 type ApiResponse = {
   activated: boolean;
@@ -93,7 +93,7 @@ export function PerformanceOverview() {
       .catch(() => {});
   }, [dataset]);
 
-  // â”€â”€ Fallback statis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fallback statis ───────────────────────────────────────────────────────
   if (!dataset || !apiData?.activated) {
     return (
       <Card className="@container/card">
@@ -178,7 +178,7 @@ export function PerformanceOverview() {
         <CardTitle className="leading-none">Performance Overview</CardTitle>
         <CardDescription>
           <span className="@[540px]/card:block hidden">
-            Tren kolom numerik â€” {apiData.dataset?.fileName}
+            Tren kolom numerik — {apiData.dataset?.fileName}
           </span>
           <span className="@[540px]/card:hidden">{apiData.dataset?.fileName}</span>
         </CardDescription>

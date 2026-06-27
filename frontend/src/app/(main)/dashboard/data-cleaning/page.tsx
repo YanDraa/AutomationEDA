@@ -32,7 +32,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const API_BASE = BACKEND_URL;
 const NOTIFICATION_DURATION = 3_000;
@@ -62,7 +62,7 @@ type Notification = {
   message: string;
 };
 
-// â”€â”€â”€ Notification Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Notification Banner ────────────────────────────────────────────────────
 
 function NotificationBanner({
   notifications,
@@ -110,7 +110,7 @@ function NotificationBanner({
   );
 }
 
-// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Empty State ─────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (
@@ -134,7 +134,7 @@ function EmptyState() {
   );
 }
 
-// â”€â”€â”€ Metric Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Metric Card ─────────────────────────────────────────────────────────────
 
 function MetricCard({
   icon: Icon,
@@ -178,7 +178,7 @@ function MetricCard({
   );
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Page() {
   const router = useRouter();
@@ -267,12 +267,12 @@ export default function Page() {
 
           const message =
             action === "drop_duplicates"
-              ? `${label} berhasil â€” ${String(changes.rows_removed)} baris duplikat dihapus. Sisa ${String(changes.rows_after)} baris.`
+              ? `${label} berhasil — ${String(changes.rows_removed)} baris duplikat dihapus. Sisa ${String(changes.rows_after)} baris.`
               : action === "drop_missing_rows"
-                ? `${label} berhasil â€” ${String(changes.rows_removed)} baris dengan NaN dihapus. Sisa ${String(changes.rows_after)} baris.`
+                ? `${label} berhasil — ${String(changes.rows_removed)} baris dengan NaN dihapus. Sisa ${String(changes.rows_after)} baris.`
                 : action === "standardize_text"
-                  ? `${label} berhasil â€” semua kolom teks sudah distandardisasi (trim + lowercase).`
-                  : `${label} berhasil â€” missing cells: ${String(changes.missing_before)} â†’ ${String(changes.missing_after)}.`;
+                  ? `${label} berhasil — semua kolom teks sudah distandardisasi (trim + lowercase).`
+                  : `${label} berhasil — missing cells: ${String(changes.missing_before)} → ${String(changes.missing_after)}.`;
 
           addNotification("success", message);
         } else {
@@ -340,7 +340,7 @@ export default function Page() {
       <div>
         <h1 className="font-semibold text-2xl">Data Cleaning</h1>
         <p className="mt-1 text-muted-foreground text-sm">
-          Interactive data cleaning â€” duplicates, missing values, and text standardization.
+          Interactive data cleaning — duplicates, missing values, and text standardization.
         </p>
       </div>
 

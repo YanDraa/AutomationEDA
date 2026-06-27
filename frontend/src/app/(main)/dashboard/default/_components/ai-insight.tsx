@@ -23,7 +23,7 @@ function MarkdownText({ text }: { text: string }) {
   return (
     <ul className="flex flex-col gap-1.5">
       {lines.map((line, i) => {
-        const clean = line.replace(/^[-â€¢]\s*/, "");
+        const clean = line.replace(/^[-•]\s*/, "");
         const parts = clean.split(/\*\*(.*?)\*\*/g);
         return (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
@@ -127,7 +127,7 @@ export function AiInsight() {
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {expanded === col.column ? "â–²" : "â–¼"}
+                        {expanded === col.column ? "\u25b2" : "\u25bc"}
                       </span>
                     </button>
                     {expanded === col.column && (

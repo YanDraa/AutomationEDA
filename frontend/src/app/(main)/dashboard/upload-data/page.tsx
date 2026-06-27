@@ -31,7 +31,7 @@ import { useDataset } from "@/context/dataset-context";
 import { cn } from "@/lib/utils";
 import { type HistoryEntry, UploadHistory } from "./upload-history";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const API_BASE = BACKEND_URL;
 
@@ -51,7 +51,7 @@ const FORMAT_INFO: {
   { ext: ".xls", label: ".xls", desc: "Legacy Microsoft Excel", icon: FileSpreadsheet },
 ];
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function isAccepted(fileName: string): boolean {
   const lower = fileName.toLowerCase();
@@ -64,7 +64,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Page() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function Page() {
 
   const accepted = useMemo(() => ACCEPTED_EXTENSIONS.join(","), []);
 
-  // â”€â”€ Fetch upload history and active dataset on mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch upload history and active dataset on mount ──────────────────────────
 
   useEffect(() => {
     async function fetchData() {
@@ -111,7 +111,7 @@ export default function Page() {
     fetchData();
   }, []);
 
-  // â”€â”€ Upload handler: POST to /api/data/analyze â†’ redirect on success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Upload handler: POST to /api/data/analyze → redirect on success ──────────
 
   const handleFileUpload = useCallback(
     async (file: File | null | undefined) => {
@@ -194,7 +194,7 @@ export default function Page() {
     [setDataset, router],
   );
 
-  // â”€â”€ Delete handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Delete handler ─────────────────────────────────────────────────────────
 
   const handleDelete = useCallback(
     async (fileName: string) => {
@@ -275,7 +275,7 @@ export default function Page() {
     [setDataset, router],
   );
 
-  // â”€â”€ Drag & drop handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Drag & drop handlers ────────────────────────────────────────────────────
 
   const onDrop: React.DragEventHandler<HTMLLabelElement> = useCallback(
     (e) => {
@@ -314,7 +314,7 @@ export default function Page() {
     )?.click();
   }, []);
 
-  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 overflow-x-hidden p-1 pb-10">

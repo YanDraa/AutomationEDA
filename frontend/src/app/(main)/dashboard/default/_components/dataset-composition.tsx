@@ -58,7 +58,7 @@ export function DatasetComposition() {
       <CardHeader>
         <CardTitle className="text-sm font-semibold">Dataset Composition</CardTitle>
         <CardDescription className="text-xs">
-          Distribusi tipe kolom â€” {api.dataset?.fileName}
+          Distribusi tipe kolom — {api.dataset?.fileName}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,7 +96,7 @@ export function DatasetComposition() {
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* Center label â€” absolute di dalam wrapper relative */}
+            {/* Center label — absolute di dalam wrapper relative */}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl font-bold">{total}</span>
               <span className="text-[10px] text-muted-foreground">kolom</span>

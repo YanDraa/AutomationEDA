@@ -35,7 +35,7 @@ function GenericDataTable({ rows, columns }: {
                 {columns.map((col) => (
                   <TableCell key={col} className="px-3 py-2.5 text-sm whitespace-nowrap">
                     {row[col] === null || row[col] === undefined
-                      ? <span className="text-muted-foreground/50 italic text-xs">â€”</span>
+                      ? <span className="text-muted-foreground/50 italic text-xs">—</span>
                       : String(row[col])}
                   </TableCell>
                 ))}
@@ -102,10 +102,10 @@ export function SubscriberOverview() {
     <Card>
       <CardHeader>
         <CardTitle className="text-sm font-semibold leading-none">
-          Dataset Preview â€” {fileName}
+          Dataset Preview — {fileName}
         </CardTitle>
         <CardDescription className="text-xs">
-          {totalRows.toLocaleString()} total records Â· menampilkan 10 baris pertama Â· {previewColumns.length} kolom
+          {totalRows.toLocaleString()} total records · menampilkan 10 baris pertama · {previewColumns.length} kolom
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">

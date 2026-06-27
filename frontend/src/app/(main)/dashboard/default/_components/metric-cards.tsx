@@ -56,7 +56,7 @@ export function MetricCards() {
               <CardDescription className="text-xs">{p.label}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tabular-nums text-muted-foreground">â€”</div>
+              <div className="text-2xl font-semibold tabular-nums text-muted-foreground">—</div>
             </CardContent>
           </Card>
         ))}

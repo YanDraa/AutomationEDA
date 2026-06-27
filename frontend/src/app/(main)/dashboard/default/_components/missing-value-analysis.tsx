@@ -50,8 +50,8 @@ export function MissingValueAnalysis() {
         <CardTitle className="leading-none">Missing Value Analysis</CardTitle>
         <CardDescription>
           {hasMissing
-            ? `${totalMissing.toLocaleString()} nilai kosong ditemukan â€” ${api.dataset?.fileName}`
-            : `Dataset bersih, tidak ada missing values â€” ${api.dataset?.fileName}`}
+            ? `${totalMissing.toLocaleString()} nilai kosong ditemukan — ${api.dataset?.fileName}`
+            : `Dataset bersih, tidak ada missing values — ${api.dataset?.fileName}`}
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-6">
@@ -123,7 +123,7 @@ export function MissingValueAnalysis() {
             {[
               { color: "hsl(142 71% 45%)", label: "0% (bersih)" },
               { color: "hsl(45 93% 47%)",  label: "< 5%" },
-              { color: "hsl(25 95% 53%)",  label: "5â€“20%" },
+              { color: "hsl(25 95% 53%)",  label: "5–20%" },
               { color: "hsl(0 84% 60%)",   label: "> 20%" },
             ].map((l) => (
               <div key={l.label} className="flex items-center gap-1.5">

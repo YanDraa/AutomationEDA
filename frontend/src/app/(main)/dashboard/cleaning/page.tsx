@@ -41,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const API_BASE = BACKEND_URL;
 
@@ -58,7 +58,7 @@ const MISSING_OPTIONS: { value: MissingAction; label: string; desc: string; icon
   { value: "drop_missing_rows", label: "Drop Rows", desc: "Remove any row with NaN", icon: Trash2 },
 ];
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function qualityScore(totalRows: number, totalColumns: number, missingCells: number, duplicateRows: number): number {
   if (totalRows <= 0 || totalColumns <= 0) return 100;
@@ -75,7 +75,7 @@ function qualityInfo(score: number) {
   return { text: "Poor", gradient: "from-red-500 to-orange-400" };
 }
 
-// â”€â”€â”€ Circular Progress Ring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Circular Progress Ring ─────────────────────────────────────────────────
 
 function ProgressRing({ score, size = 100, stroke = 8 }: { score: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2;
@@ -109,7 +109,7 @@ function ProgressRing({ score, size = 100, stroke = 8 }: { score: number; size?:
   );
 }
 
-// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Empty State ────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (
@@ -131,7 +131,7 @@ function EmptyState() {
   );
 }
 
-// â”€â”€â”€ Stat Chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Stat Chip ──────────────────────────────────────────────────────────────
 
 function StatChip({ icon, label, value, accent, sub }: { icon: React.ReactNode; label: string; value: string; accent: string; sub?: React.ReactNode }) {
   return (
@@ -148,7 +148,7 @@ function StatChip({ icon, label, value, accent, sub }: { icon: React.ReactNode; 
   );
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function Page() {
   const router = useRouter();
@@ -218,15 +218,15 @@ export default function Page() {
         const c = json.changes ?? {};
         const lbl: Record<string, string> = { impute_mean: "Impute Mean", impute_median: "Impute Median", impute_mode: "Impute Mode", drop_missing_rows: "Drop Rows", standardize_text: "Standardize" };
         let msg: string;
-        if (action === "drop_missing_rows") msg = `${lbl[action]} â€” ${String(c.rows_removed)} removed, ${String(c.rows_after)} left.`;
-        else if (action === "standardize_text") msg = `${lbl[action]} â€” all text columns normalized.`;
-        else msg = `${lbl[action]} â€” missing: ${String(c.missing_before)} â†’ ${String(c.missing_after)}.`;
+        if (action === "drop_missing_rows") msg = `${lbl[action]} — ${String(c.rows_removed)} removed, ${String(c.rows_after)} left.`;
+        else if (action === "standardize_text") msg = `${lbl[action]} — all text columns normalized.`;
+        else msg = `${lbl[action]} — missing: ${String(c.missing_before)} → ${String(c.missing_after)}.`;
         toast.success(msg);
       } else { toast.error(json.detail ?? "Failed."); }
     } catch { toast.error("Cannot connect to backend."); } finally { setExecuting(null); }
   }, [fetchSummary]);
 
-  // â”€â”€â”€ Loading â”€â”€
+  // ─── Loading ──
   if (loading) {
     return (
       <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden px-2">
@@ -249,7 +249,7 @@ export default function Page() {
 
   return (
     <div className="@container/clean flex w-full max-w-full flex-col gap-5 overflow-x-hidden px-2">
-      {/* â•â•â• HERO BANNER â•â•â• */}
+      {/* === HERO BANNER === */}
       <div className="relative overflow-hidden rounded-2xl border shadow-md">
         {/* gradient accent */}
         <div className={`absolute inset-0 bg-gradient-to-br ${qInfo.gradient} opacity-[0.07]`} />
@@ -287,28 +287,28 @@ export default function Page() {
               <>
                 <Zap className="size-4 text-amber-500" />
                 <span className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">{issueCount} issue{issueCount > 1 ? "s" : ""}</span> detected â€”{" "}
+                  <span className="font-semibold text-foreground">{issueCount} issue{issueCount > 1 ? "s" : ""}</span> detected —{" "}
                   {duplicatedRows > 0 && <span>{duplicatedRows.toLocaleString()} duplicates </span>}
-                  {duplicatedRows > 0 && missingCells > 0 && <span>Â· </span>}
+                  {duplicatedRows > 0 && missingCells > 0 && <span>· </span>}
                   {missingCells > 0 && <span>{missingCells.toLocaleString()} missing cells </span>}
-                  â€” use the actions below to fix them
+                  — use the actions below to fix them
                 </span>
               </>
             ) : (
               <>
                 <ShieldCheck className="size-4 text-emerald-500" />
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">Dataset is clean</span>
-                <span className="text-muted-foreground">â€” no duplicates or missing values detected</span>
+                <span className="text-muted-foreground">— no duplicates or missing values detected</span>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* â•â•â• ACTION CARDS â•â•â• */}
+      {/* === ACTION CARDS === */}
       <div className="grid min-w-0 grid-cols-1 gap-4 @2xl/clean:grid-cols-2 [&>*]:flex [&>*]:flex-col">
 
-        {/* â”€â”€ 1. Duplicates â”€â”€ */}
+        {/* ── 1. Duplicates ── */}
         <Card className="min-w-0 overflow-hidden shadow-sm transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -358,7 +358,7 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        {/* â”€â”€ 2. Missing Values â”€â”€ */}
+        {/* ── 2. Missing Values ── */}
         <Card className="min-w-0 overflow-hidden shadow-sm transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -434,7 +434,7 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        {/* â”€â”€ 3. Text Standardization â”€â”€ */}
+        {/* ── 3. Text Standardization ── */}
         <Card className="min-w-0 overflow-hidden shadow-sm transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -471,7 +471,7 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        {/* â”€â”€ 4. Reset to Raw â”€â”€ */}
+        {/* ── 4. Reset to Raw ── */}
         <Card className="min-w-0 overflow-hidden shadow-sm transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -501,7 +501,7 @@ export default function Page() {
         </Card>
       </div>
 
-      {/* â•â•â• COLUMN HEALTH TABLE â•â•â• */}
+      {/* === COLUMN HEALTH TABLE === */}
       <Card className="overflow-hidden shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
