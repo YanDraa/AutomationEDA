@@ -1,4 +1,5 @@
-﻿export { BACKEND_URL } from "@/lib/config";
+import { BACKEND_URL } from "@/lib/config";
+export { BACKEND_URL };
 
 export type HighchartsOptions = Record<string, unknown>;
 
