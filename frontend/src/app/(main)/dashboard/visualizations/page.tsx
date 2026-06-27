@@ -237,7 +237,7 @@ function buildGroupedComparisonOptions(payload: any): HighchartsOptions {
 
 function EmptyState() {
   return (
-    <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 py-20 text-center overflow-x-hidden">
+    <div className="flex w-full flex-col items-center justify-center gap-4 py-20 text-center">
       <div className="rounded-2xl bg-primary/10 p-5 shadow-inner">
         <Database className="size-10 text-primary" />
       </div>
@@ -247,7 +247,7 @@ function EmptyState() {
           Silakan unggah file data terlebih dahulu untuk mengaktifkan Pembuat Grafik Statistik Berbasis AI.
         </p>
       </div>
-      <Button asChild size="default" className="rounded-xl font-semibold shadow-sm mt-2">
+      <Button asChild size="default" className="rounded-xl font-semibold shadow-xs mt-2">
         <Link href="/dashboard/upload-data">
           <Upload className="mr-2 size-4" />
           Unggah Dataset
@@ -450,7 +450,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-full overflow-x-hidden flex flex-col gap-6">
+      <div className="w-full min-w-0 flex flex-col gap-6 p-1">
         <div className="flex flex-col gap-1.5">
           <Skeleton className="h-8 w-64 rounded-xl" />
           <Skeleton className="h-4 w-96 rounded-lg" />
@@ -468,7 +468,7 @@ export default function Page() {
 
   if (!hasData || !schemaData) {
     return (
-      <div className="w-full max-w-full overflow-x-hidden flex flex-col gap-4">
+      <div className="w-full min-w-0 flex flex-col gap-4 p-1">
         {notification && (
           <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-400 transition-all">
             <div className="flex items-center gap-3">
@@ -490,7 +490,7 @@ export default function Page() {
   const infoY = varY ? schemaData[varY] : null;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden flex flex-col gap-6">
+    <div className="w-full min-w-0 flex flex-col gap-6 p-1">
       
       {/* Toast Notification Bar */}
       {notification && (
@@ -525,11 +525,11 @@ export default function Page() {
       </div>
 
       {/* Main Form controls and Insight Badges Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-0.5">
         
         {/* Dropdowns Card */}
-        <Card className="lg:col-span-2 rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
-          <CardHeader className="border-b border-border/40 pb-4 bg-muted/20">
+        <Card className="lg:col-span-2 rounded-2xl border-border/60 shadow-sm bg-card">
+          <CardHeader className="border-b border-border/40 pb-4 bg-muted/20 rounded-t-2xl">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Sliders className="size-4 text-primary" />
               Pemilihan Variabel
@@ -538,7 +538,7 @@ export default function Page() {
               Pilih variabel untuk dianalisis. Pilihan grafik akan menyesuaikan secara otomatis.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-5 pt-6">
+          <CardContent className="flex flex-col gap-5 pt-6 pb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               {/* Var X Selection */}
@@ -609,7 +609,7 @@ export default function Page() {
                         onClick={() => setSelectedChartType(chart)}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider border transition-all ${
                           selectedChartType === chart
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
                             : "bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted/30"
                         }`}
                       >
@@ -634,8 +634,8 @@ export default function Page() {
         </Card>
 
         {/* AI Insight Badges Card */}
-        <Card className="rounded-2xl border-border/60 shadow-sm flex flex-col justify-between bg-card overflow-hidden">
-          <CardHeader className="border-b border-border/40 pb-4 bg-muted/20">
+        <Card className="rounded-2xl border-border/60 shadow-sm flex flex-col justify-between bg-card">
+          <CardHeader className="border-b border-border/40 pb-4 bg-muted/20 rounded-t-2xl">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Sparkles className="size-4 text-primary" />
               Konsultan Data AI
@@ -649,15 +649,15 @@ export default function Page() {
             {/* Variable X Badge */}
             {infoX && (
               <div className="flex flex-col gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-xs text-foreground truncate max-w-[150px]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-semibold text-xs text-foreground break-words">
                     Var X: {varX}
                   </span>
                   <Badge variant="outline" className={`${getTypeBadgeStyle(infoX.type)} text-[10px] uppercase font-bold shrink-0 py-0.5 px-2 rounded-lg`}>
                     {infoX.type}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed break-words">
                   {infoX.reason}
                 </p>
               </div>
@@ -666,15 +666,15 @@ export default function Page() {
             {/* Variable Y Badge */}
             {varY && infoY ? (
               <div className="flex flex-col gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-xs text-foreground truncate max-w-[150px]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-semibold text-xs text-foreground break-words">
                     Var Y: {varY}
                   </span>
                   <Badge variant="outline" className={`${getTypeBadgeStyle(infoY.type)} text-[10px] uppercase font-bold shrink-0 py-0.5 px-2 rounded-lg`}>
                     {infoY.type}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed break-words">
                   {infoY.reason}
                 </p>
               </div>
@@ -697,7 +697,7 @@ export default function Page() {
       </div>
 
       {/* Chart Canvas Rendering Section */}
-      <div className="w-full max-w-full overflow-x-hidden">
+      <div className="w-full min-w-0">
         {chartLoading ? (
           <Card className="rounded-2xl border-border/60 shadow-sm w-full bg-card">
             <CardContent className="flex flex-col items-center justify-center py-24 gap-3">
@@ -720,14 +720,14 @@ export default function Page() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="rounded-2xl border-border/60 shadow-sm w-full overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 bg-muted/20 py-3.5 px-6">
+          <Card className="rounded-2xl border-border/60 shadow-sm w-full bg-card">
+            <CardHeader className="border-b border-border/40 bg-muted/20 py-3.5 px-6 rounded-t-2xl">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <TrendingUp className="size-4 text-primary" />
                 Grafik Terender: {chartPayload.type}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 w-full max-w-full overflow-x-hidden">
+            <CardContent className="p-4 md:p-6 w-full min-w-0">
               <div className="w-full overflow-x-auto min-w-0">
                 {chartOptions ? (
                   <HighchartsChart options={chartOptions} />

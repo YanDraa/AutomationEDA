@@ -48,8 +48,8 @@ export default function Page() {
   }
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
-      <div className="flex items-start justify-between gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-6 p-1">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
             <Sparkles className="size-6 text-primary" />
@@ -66,7 +66,7 @@ export default function Page() {
       </div>
 
       {error ? (
-        <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive text-sm font-medium">
+        <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive text-sm font-medium break-words">
           <AlertCircle className="size-4 shrink-0" />
           {error}
         </div>
@@ -94,19 +94,19 @@ export default function Page() {
               <FileText className="size-4 text-primary" />
               Interpretasi Per Kolom
             </h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 py-0.5">
               {data.column_insights.map((item) => (
-                <Card key={`${item.type}-${item.column}`} className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card transition-all hover:shadow-md">
-                  <CardHeader className="pb-2 border-b border-border/40 bg-muted/20 py-3 px-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <CardTitle className="text-xs font-bold text-foreground">{item.column}</CardTitle>
-                      <Badge variant="outline" className="rounded-lg text-[10px] uppercase font-bold py-0.5 px-2 bg-background border-border/60">
+                <Card key={`${item.type}-${item.column}`} className="rounded-2xl border-border/60 shadow-sm bg-card transition-all hover:shadow-md">
+                  <CardHeader className="pb-2 border-b border-border/40 bg-muted/20 py-3 px-4 rounded-t-2xl">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-xs font-bold text-foreground break-words">{item.column}</CardTitle>
+                      <Badge variant="outline" className="rounded-lg text-[10px] uppercase font-bold py-0.5 px-2 bg-background border-border/60 shrink-0">
                         {item.type}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-3 px-4 pb-4">
-                    <p className="whitespace-pre-line text-muted-foreground text-xs leading-relaxed">
+                    <p className="whitespace-pre-line text-muted-foreground text-xs leading-relaxed break-words">
                       {item.insight.replace(/\*\*/g, "")}
                     </p>
                   </CardContent>
@@ -115,16 +115,16 @@ export default function Page() {
             </div>
           </div>
 
-          <Card className="rounded-2xl border-l-4 border-l-primary border-border/60 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+          <Card className="rounded-2xl border-l-4 border-l-primary border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 rounded-t-2xl">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <CheckCircle2 className="size-4 text-primary" />
                 Kesimpulan Eksekutif
               </CardTitle>
               <CardDescription className="text-xs">Ringkasan temuan utama dan rekomendasi dari seluruh dataset</CardDescription>
             </CardHeader>
-            <CardContent className="pt-4">
-              <p className="whitespace-pre-line text-muted-foreground text-xs leading-relaxed">
+            <CardContent className="pt-4 pb-4">
+              <p className="whitespace-pre-line text-muted-foreground text-xs leading-relaxed break-words">
                 {data.summary.insight.replace(/\*\*/g, "")}
               </p>
             </CardContent>

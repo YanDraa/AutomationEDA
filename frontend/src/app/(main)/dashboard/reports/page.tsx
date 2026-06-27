@@ -57,7 +57,7 @@ export default function Page() {
   };
 
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-6 mx-auto pb-10">
+    <div className="flex w-full min-w-0 max-w-5xl flex-col gap-6 mx-auto pb-10 p-1">
       <div className="flex flex-col gap-1">
         <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
           <FileText className="size-6 text-primary" />
@@ -68,10 +68,10 @@ export default function Page() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-0.5">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 pb-4 bg-muted/20">
+          <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border/40 pb-4 bg-muted/20 rounded-t-2xl">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Settings className="w-4 h-4 text-primary" />
                 Konfigurasi Bagian Laporan
@@ -80,58 +80,58 @@ export default function Page() {
                 Pilih komponen analisis yang akan dimasukkan ke dalam dokumen laporan akhir.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3.5 pt-6">
+            <CardContent className="space-y-3.5 pt-6 pb-6">
               
               <div className="flex items-center justify-between rounded-xl border border-border/40 p-4 transition-all hover:bg-muted/30">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 min-w-0 pr-2">
                   <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 shrink-0 mt-0.5">
                     <ShieldAlert className="w-4 h-4 text-amber-500" />
                   </div>
-                  <div className="space-y-0.5">
-                    <Label htmlFor="missing_data" className="text-sm font-semibold cursor-pointer text-foreground">Audit Data Hilang (Missing)</Label>
-                    <p className="text-xs text-muted-foreground">Tabel ringkasan dan persentase data kosong pada setiap kolom.</p>
+                  <div className="space-y-0.5 min-w-0">
+                    <Label htmlFor="missing_data" className="text-sm font-semibold cursor-pointer text-foreground block break-words">Audit Data Hilang (Missing)</Label>
+                    <p className="text-xs text-muted-foreground break-words">Tabel ringkasan dan persentase data kosong pada setiap kolom.</p>
                   </div>
                 </div>
-                <Switch id="missing_data" checked={sections.missing_data} onCheckedChange={() => handleToggle('missing_data')} />
+                <Switch id="missing_data" checked={sections.missing_data} onCheckedChange={() => handleToggle('missing_data')} className="shrink-0 ml-2" />
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-border/40 p-4 transition-all hover:bg-muted/30">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 min-w-0 pr-2">
                   <div className="flex size-9 items-center justify-center rounded-lg bg-destructive/10 shrink-0 mt-0.5">
                     <ShieldAlert className="w-4 h-4 text-destructive" />
                   </div>
-                  <div className="space-y-0.5">
-                    <Label htmlFor="outliers" className="text-sm font-semibold cursor-pointer text-foreground">Laporan Outliers (Anomali)</Label>
-                    <p className="text-xs text-muted-foreground">Deteksi dan distribusi pencilan secara statistik menggunakan IQR.</p>
+                  <div className="space-y-0.5 min-w-0">
+                    <Label htmlFor="outliers" className="text-sm font-semibold cursor-pointer text-foreground block break-words">Laporan Outliers (Anomali)</Label>
+                    <p className="text-xs text-muted-foreground break-words">Deteksi dan distribusi pencilan secara statistik menggunakan IQR.</p>
                   </div>
                 </div>
-                <Switch id="outliers" checked={sections.outliers} onCheckedChange={() => handleToggle('outliers')} />
+                <Switch id="outliers" checked={sections.outliers} onCheckedChange={() => handleToggle('outliers')} className="shrink-0 ml-2" />
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-border/40 p-4 transition-all hover:bg-muted/30">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 min-w-0 pr-2">
                   <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10 shrink-0 mt-0.5">
                     <BarChart3 className="w-4 h-4 text-blue-500" />
                   </div>
-                  <div className="space-y-0.5">
-                    <Label htmlFor="statistical_profile" className="text-sm font-semibold cursor-pointer text-foreground">Profil Statistik Deskriptif</Label>
-                    <p className="text-xs text-muted-foreground">Matriks statistik lengkap (Mean, Median, Std Dev, Min, Max, Skewness).</p>
+                  <div className="space-y-0.5 min-w-0">
+                    <Label htmlFor="statistical_profile" className="text-sm font-semibold cursor-pointer text-foreground block break-words">Profil Statistik Deskriptif</Label>
+                    <p className="text-xs text-muted-foreground break-words">Matriks statistik lengkap (Mean, Median, Std Dev, Min, Max, Skewness).</p>
                   </div>
                 </div>
-                <Switch id="statistical_profile" checked={sections.statistical_profile} onCheckedChange={() => handleToggle('statistical_profile')} />
+                <Switch id="statistical_profile" checked={sections.statistical_profile} onCheckedChange={() => handleToggle('statistical_profile')} className="shrink-0 ml-2" />
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-border/40 p-4 transition-all hover:bg-muted/30">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 min-w-0 pr-2">
                   <div className="flex size-9 items-center justify-center rounded-lg bg-violet-500/10 shrink-0 mt-0.5">
                     <Lightbulb className="w-4 h-4 text-violet-500" />
                   </div>
-                  <div className="space-y-0.5">
-                    <Label htmlFor="executive_insights" className="text-sm font-semibold cursor-pointer text-foreground">Narasikan Executive Insights AI</Label>
-                    <p className="text-xs text-muted-foreground">Interpretasi otomatis dan kesimpulan tingkat tinggi dari pola data.</p>
+                  <div className="space-y-0.5 min-w-0">
+                    <Label htmlFor="executive_insights" className="text-sm font-semibold cursor-pointer text-foreground block break-words">Narasikan Executive Insights AI</Label>
+                    <p className="text-xs text-muted-foreground break-words">Interpretasi otomatis dan kesimpulan tingkat tinggi dari pola data.</p>
                   </div>
                 </div>
-                <Switch id="executive_insights" checked={sections.executive_insights} onCheckedChange={() => handleToggle('executive_insights')} />
+                <Switch id="executive_insights" checked={sections.executive_insights} onCheckedChange={() => handleToggle('executive_insights')} className="shrink-0 ml-2" />
               </div>
 
             </CardContent>
@@ -139,21 +139,21 @@ export default function Page() {
         </div>
 
         <div className="space-y-6">
-          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+          <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 rounded-t-2xl">
               <CardTitle className="text-base font-semibold">Format Output</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-3">
+            <CardContent className="pt-4 pb-4 space-y-3">
               <div 
                 className={`flex items-center gap-3 rounded-xl border p-3.5 cursor-pointer transition-all ${
-                  format === 'pdf' ? 'border-primary bg-primary/10 shadow-sm' : 'border-border/40 hover:bg-muted/30'
+                  format === 'pdf' ? 'border-primary bg-primary/10 shadow-xs' : 'border-border/40 hover:bg-muted/30'
                 }`} 
                 onClick={() => setFormat("pdf")}
               >
                 <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                   <FileText className="w-4 h-4 text-primary" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-foreground">Dokumen PDF</p>
                   <p className="text-[11px] text-muted-foreground">Siap cetak, formal & rapi</p>
                 </div>
@@ -162,14 +162,14 @@ export default function Page() {
 
               <div 
                 className={`flex items-center gap-3 rounded-xl border p-3.5 cursor-pointer transition-all ${
-                  format === 'html' ? 'border-primary bg-primary/10 shadow-sm' : 'border-border/40 hover:bg-muted/30'
+                  format === 'html' ? 'border-primary bg-primary/10 shadow-xs' : 'border-border/40 hover:bg-muted/30'
                 }`} 
                 onClick={() => setFormat("html")}
               >
                 <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                   <FileCode className="w-4 h-4 text-primary" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-foreground">HTML Interaktif</p>
                   <p className="text-[11px] text-muted-foreground">Tampilan dinamis 1 file</p>
                 </div>
@@ -178,7 +178,7 @@ export default function Page() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-slate-50 shadow-xl overflow-hidden relative">
+          <Card className="rounded-2xl border-0 bg-gradient-to-br from-slate-900 to-slate-800 text-slate-50 shadow-xl relative">
             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
               <FileText className="w-36 h-36" />
             </div>
@@ -191,23 +191,23 @@ export default function Page() {
                 Sistem akan menyusun {Object.values(sections).filter(Boolean).length} bagian terpilih.
               </CardDescription>
             </CardHeader>
-            <CardContent className="relative z-10 pt-1">
+            <CardContent className="relative z-10 pt-1 pb-2">
               <div className="space-y-2 text-xs text-slate-200">
-                <div className="flex justify-between border-b border-slate-700/60 pb-2">
-                  <span className="text-slate-400">Dataset:</span>
-                  <span className="font-semibold truncate max-w-[150px]">{dataset.fileName}</span>
+                <div className="flex justify-between border-b border-slate-700/60 pb-2 gap-2">
+                  <span className="text-slate-400 shrink-0">Dataset:</span>
+                  <span className="font-semibold break-all text-right">{dataset.fileName}</span>
                 </div>
-                <div className="flex justify-between border-b border-slate-700/60 pb-2">
-                  <span className="text-slate-400">Total Baris:</span>
+                <div className="flex justify-between border-b border-slate-700/60 pb-2 gap-2">
+                  <span className="text-slate-400 shrink-0">Total Baris:</span>
                   <span className="font-semibold">{dataset.rows.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pb-1">
-                  <span className="text-slate-400">Total Kolom:</span>
+                <div className="flex justify-between pb-1 gap-2">
+                  <span className="text-slate-400 shrink-0">Total Kolom:</span>
                   <span className="font-semibold">{dataset.columns.toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="relative z-10 pt-4">
+            <CardFooter className="relative z-10 pt-4 pb-5">
               <Button 
                 onClick={handleGenerate} 
                 disabled={downloading}

@@ -49,7 +49,6 @@ export default function Page() {
         setDataset(result);
         setSuccessFile(file.name);
 
-        // After upload, auto-navigate to preview page
         router.push("/dashboard/data-preview");
 
       } catch (e) {
@@ -96,7 +95,7 @@ export default function Page() {
   );
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-6 p-1">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
@@ -108,20 +107,20 @@ export default function Page() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 py-0.5">
         {/* Dropzone */}
         <div className="lg:col-span-2">
-          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 pb-4 bg-muted/20">
+          <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border/40 pb-4 bg-muted/20 rounded-t-2xl">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Sparkles className="size-4 text-primary" />
                 Area Unggah File
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs">
                 Seret & lepas file atau klik area di bawah untuk memilih file dari perangkat Anda.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4 pt-6">
+            <CardContent className="flex flex-col gap-4 pt-6 pb-6">
               <label
                 htmlFor="dataset-upload-input"
                 onDrop={onDrop}
@@ -129,7 +128,7 @@ export default function Page() {
                 onDragLeave={onDragLeave}
                 className={`flex min-h-64 cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
                   isDragging
-                    ? "border-primary bg-primary/10 scale-[1.01] shadow-lg shadow-primary/10"
+                    ? "border-primary bg-primary/10 scale-[1.01] shadow-md"
                     : "border-border/60 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
                 }`}
               >
@@ -155,7 +154,7 @@ export default function Page() {
                     <span className="font-semibold text-foreground">.TXT</span>
                   </p>
                 </div>
-                <div className="flex gap-3 mt-2">
+                <div className="flex flex-wrap justify-center gap-3 mt-2">
                   <Button
                     type="button"
                     size="sm"
@@ -164,7 +163,7 @@ export default function Page() {
                       e.preventDefault();
                       (document.getElementById("dataset-upload-input") as HTMLInputElement | null)?.click();
                     }}
-                    className="rounded-xl px-4 font-semibold shadow-sm"
+                    className="rounded-xl px-4 font-semibold shadow-xs"
                   >
                     {isParsing ? "Memproses..." : "Pilih File dari Perangkat"}
                   </Button>
@@ -191,7 +190,7 @@ export default function Page() {
 
               {/* Error */}
               {error && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm font-medium">
+                <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm font-medium break-words">
                   <AlertCircle className="size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -199,7 +198,7 @@ export default function Page() {
 
               {/* Success */}
               {successFile && !error && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-700 dark:text-emerald-400 text-sm font-medium break-words">
                   <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>
                     File <span className="font-bold">"{successFile}"</span> berhasil diunggah dan dianalisis.
@@ -212,34 +211,34 @@ export default function Page() {
 
         {/* Info Panel */}
         <div className="flex flex-col gap-6">
-          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+          <Card className="rounded-2xl border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 rounded-t-2xl">
               <CardTitle className="text-base font-semibold">Format yang Didukung</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3 pt-4">
+            <CardContent className="flex flex-col gap-3 pt-4 pb-4">
               {[
                 { ext: ".CSV", desc: "Comma-Separated Values", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
                 { ext: ".XLSX / .XLS", desc: "Microsoft Excel Worksheet", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
                 { ext: ".JSON / .TXT", desc: "Structured / Delimited Data", color: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
               ].map((f) => (
-                <div key={f.ext} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/40 bg-muted/10">
-                  <div className={`flex size-9 items-center justify-center rounded-lg ${f.color} font-bold text-xs`}>
+                <div key={f.ext} className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-muted/10">
+                  <div className={`flex size-9 items-center justify-center rounded-lg ${f.color} font-bold text-xs shrink-0`}>
                     <FileSpreadsheet className="size-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-xs text-foreground">{f.ext}</p>
-                    <p className="text-muted-foreground text-[11px]">{f.desc}</p>
+                    <p className="text-muted-foreground text-[11px] break-words">{f.desc}</p>
                   </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card flex-1">
-            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+          <Card className="rounded-2xl border-border/60 shadow-sm bg-card flex-1">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 rounded-t-2xl">
               <CardTitle className="text-base font-semibold">Alur Analisis EDA</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2.5 pt-4">
+            <CardContent className="flex flex-col gap-2.5 pt-4 pb-4">
               {[
                 "Unggah file dataset",
                 "Periksa integritas & preview data",
@@ -251,15 +250,15 @@ export default function Page() {
                   <div
                     className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                       i === 0 && successFile
-                        ? "bg-emerald-500 text-white shadow-sm"
+                        ? "bg-emerald-500 text-white shadow-xs"
                         : i === 0
-                        ? "bg-primary text-primary-foreground shadow-sm"
+                        ? "bg-primary text-primary-foreground shadow-xs"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {i === 0 && successFile ? "✓" : i + 1}
                   </div>
-                  <span className={`font-medium ${i === 0 && successFile ? "line-through text-muted-foreground" : "text-foreground/90"}`}>
+                  <span className={`font-semibold ${i === 0 && successFile ? "line-through text-muted-foreground" : "text-foreground/90"} break-words`}>
                     {step}
                   </span>
                 </div>

@@ -4,7 +4,6 @@ import { BarChart2, Hash, Tag, Upload, ArrowRight, Sparkles } from "lucide-react
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDataset } from "@/context/dataset-context";
 
 export default function Page() {
@@ -12,7 +11,7 @@ export default function Page() {
 
   if (!dataset) {
     return (
-      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
+      <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-hidden py-20 text-center">
         <div className="rounded-2xl bg-primary/10 p-5 shadow-inner">
           <BarChart2 className="size-10 text-primary" />
         </div>
@@ -22,7 +21,7 @@ export default function Page() {
             Silakan unggah file dataset terlebih dahulu untuk melakukan analisis statistik deskriptif.
           </p>
         </div>
-        <Button asChild size="sm" className="rounded-xl font-semibold shadow-sm mt-2">
+        <Button asChild size="sm" className="rounded-xl font-semibold shadow-xs mt-2">
           <Link href="/dashboard/upload-data"><Upload className="size-4 mr-2" />Upload Sekarang</Link>
         </Button>
       </div>
@@ -30,7 +29,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-6 p-1">
       <div className="flex flex-col gap-1">
         <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
           <BarChart2 className="size-6 text-primary" />
@@ -41,21 +40,21 @@ export default function Page() {
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2 py-1">
         <Link href="/dashboard/descriptive-statistics/numerical">
-          <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
-            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-blue-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className="group relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md">
+            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-blue-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
             <div className="flex items-start justify-between gap-4">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 shadow-xs transition-transform duration-300 group-hover:scale-110 shrink-0">
                 <Hash className="size-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground shrink-0">
                 <ArrowRight className="size-4" />
               </div>
             </div>
             <div className="mt-4 space-y-1">
               <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">Statistik Numerikal</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
+              <p className="text-muted-foreground text-xs leading-relaxed break-words">
                 Analisis ukuran pemusatan dan penyebaran data: Mean, median, modus, standar deviasi, varians, IQR, skewness, kurtosis, pendeteksian outlier, dan uji normalitas.
               </p>
             </div>
@@ -63,19 +62,19 @@ export default function Page() {
         </Link>
 
         <Link href="/dashboard/descriptive-statistics/categorical">
-          <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
-            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-purple-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className="group relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md">
+            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-purple-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
             <div className="flex items-start justify-between gap-4">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-purple-500/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-purple-500/10 shadow-xs transition-transform duration-300 group-hover:scale-110 shrink-0">
                 <Tag className="size-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground shrink-0">
                 <ArrowRight className="size-4" />
               </div>
             </div>
             <div className="mt-4 space-y-1">
               <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">Statistik Kategorikal</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
+              <p className="text-muted-foreground text-xs leading-relaxed break-words">
                 Analisis distribusi data kualitatif: Tabel frekuensi, persentase kontribusi, jumlah nilai unik (cardinality), modus, dan audit nilai hilang per atribut kategori.
               </p>
             </div>

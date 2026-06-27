@@ -430,19 +430,18 @@ interface StatCardProps {
 function StatCard({ label, value, icon: Icon, gradient, iconBg, iconColor, accentColor }: StatCardProps) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${gradient}`}
+      className={`group relative rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${gradient}`}
     >
-      {/* subtle corner accent */}
-      <div className={`absolute -right-4 -top-4 size-20 rounded-full opacity-10 blur-xl ${accentColor}`} />
+      <div className={`absolute -right-4 -top-4 size-20 rounded-full opacity-10 blur-xl pointer-events-none ${accentColor}`} />
       <div className="relative flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{label}</p>
           <p className="mt-2 font-bold text-3xl tabular-nums tracking-tight text-foreground">
             {typeof value === "number" ? numberText(value, 0) : value}
           </p>
         </div>
         <div
-          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform duration-300 group-hover:scale-110`}
         >
           <Icon className={`size-5 ${iconColor}`} />
         </div>
@@ -464,13 +463,13 @@ function SectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Icon className="size-3.5 text-primary" />
+    <div className="flex items-start justify-between gap-2 px-5 pt-5 pb-2">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <Icon className="size-4 text-primary" />
         </div>
         <div>
-          <p className="font-semibold text-sm leading-tight text-foreground">{title}</p>
+          <p className="font-bold text-sm leading-tight text-foreground">{title}</p>
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
       </div>
@@ -479,7 +478,6 @@ function SectionHeader({
   );
 }
 
-// ── Badge Pill ─────────────────────────────────────────────────────────────────
 function Pill({ variant, children }: { variant: "success" | "warning" | "info"; children: ReactNode }) {
   const cls = {
     success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
@@ -487,13 +485,12 @@ function Pill({ variant, children }: { variant: "success" | "warning" | "info"; 
     info: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
   }[variant];
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${cls}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${cls}`}>
       {children}
     </span>
   );
 }
 
-// ── Insight Accordion Item ──────────────────────────────────────────────────────
 function InsightItem({
   item,
 }: {
@@ -502,11 +499,11 @@ function InsightItem({
   const [open, setOpen] = useState(item.value === "overview");
   const Icon = item.icon;
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 transition-all duration-200 hover:border-border">
+    <div className="rounded-xl border border-border/60 bg-card transition-all duration-200 hover:border-border">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30"
+        className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-muted/30"
       >
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background shadow-sm border border-border/50">
           <Icon className="size-3.5 text-primary" />
@@ -518,19 +515,19 @@ function InsightItem({
           </div>
         </div>
         {open ? (
-          <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
         ) : (
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         )}
       </button>
       {open && (
-        <div className="space-y-1.5 px-3 pb-3">
+        <div className="space-y-1.5 px-3.5 pb-3.5">
           {item.lines.map((line) => (
             <div
               key={line}
-              className="flex gap-2 rounded-lg bg-muted/30 px-2.5 py-2 text-xs text-muted-foreground leading-relaxed"
+              className="flex gap-2 rounded-lg bg-muted/30 px-3 py-2 text-xs text-muted-foreground leading-relaxed break-words"
             >
-              <Info className="mt-0.5 size-3 shrink-0 text-primary/70" />
+              <Info className="mt-0.5 size-3.5 shrink-0 text-primary/70" />
               <p>{line}</p>
             </div>
           ))}
@@ -540,7 +537,6 @@ function InsightItem({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Page() {
   const [lang, setLang] = useState<Lang>("id");
   const t = DICT[lang];
@@ -697,11 +693,9 @@ export default function Page() {
     }
   }, [dataset, t.reportError]);
 
-  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
-        {/* Header skeleton */}
+      <div className="flex flex-col gap-6 p-1">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <Skeleton className="h-8 w-72 rounded-xl" />
@@ -709,13 +703,11 @@ export default function Page() {
           </div>
           <Skeleton className="h-9 w-28 rounded-xl" />
         </div>
-        {/* Stat cards skeleton */}
         <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        {/* Main content skeleton */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-[260px_1fr_280px]">
           <Skeleton className="h-[520px] rounded-2xl" />
           <Skeleton className="h-[520px] rounded-2xl" />
@@ -728,7 +720,7 @@ export default function Page() {
   const previewColumns = columns.slice(0, 10);
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-5 p-1">
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -766,7 +758,7 @@ export default function Page() {
       )}
 
       {/* ── Stat Cards Row ───────────────────────────────────────────────── */}
-      <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 xl:grid-cols-4 py-0.5">
         <StatCard
           label={t.rows}
           value={totalRows}
@@ -806,15 +798,13 @@ export default function Page() {
       </div>
 
       {/* ── 3-Column Main Layout ─────────────────────────────────────────── */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[260px_1fr_280px] xl:grid-cols-[280px_1fr_300px]">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[260px_1fr_280px] xl:grid-cols-[280px_1fr_300px] py-0.5">
 
         {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
-
-          {/* Dataset Control */}
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm">
             <SectionHeader icon={UploadCloud} title={t.uploadTitle} subtitle={t.uploadDesc} />
-            <div className="px-4 pb-4">
+            <div className="px-5 pb-5 pt-1">
               <label
                 htmlFor="eda-dashboard-upload"
                 onDrop={(e) => {
@@ -832,7 +822,7 @@ export default function Page() {
                 }}
                 className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed p-4 text-center transition-all duration-300 ${
                   dragging
-                    ? "scale-[1.02] border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                    ? "scale-[1.02] border-primary bg-primary/5 shadow-md"
                     : "border-border/60 bg-muted/20 hover:border-primary/40 hover:bg-muted/30"
                 }`}
               >
@@ -858,8 +848,8 @@ export default function Page() {
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-xs text-foreground">{dragging ? t.dropActive : t.dropIdle}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground truncate max-w-[180px]">
+                  <p className="font-semibold text-xs text-foreground">{dragging ? t.dropActive : t.dropIdle}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground break-all max-w-[200px]">
                     {dataset?.fileName ?? t.noDataset}
                   </p>
                 </div>
@@ -871,7 +861,7 @@ export default function Page() {
                     e.preventDefault();
                     document.getElementById("eda-dashboard-upload")?.click();
                   }}
-                  className="h-7 rounded-lg px-3 text-xs gap-1.5"
+                  className="h-7 rounded-lg px-3 text-xs gap-1.5 font-semibold"
                 >
                   {uploading ? <Loader2 className="size-3 animate-spin" /> : <FileSpreadsheet className="size-3" />}
                   {uploading ? t.processing : t.chooseFile}
@@ -880,11 +870,9 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Dataset Composition */}
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm flex-1">
             <SectionHeader icon={BarChart3} title={t.composition} />
-            <div className="px-4 pb-4">
-              {/* Donut + center label */}
+            <div className="px-5 pb-5 pt-1">
               <div className="relative h-36">
                 <MeasuredChart className="h-full w-full">
                   {({ width, height }) => (
@@ -923,7 +911,6 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* Legend */}
               <div className="mt-2 space-y-1.5">
                 {composition.length ? (
                   composition.map((item, i) => (
@@ -936,7 +923,7 @@ export default function Page() {
                           className="size-2 rounded-full shrink-0"
                           style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
                         />
-                        <span className="text-xs font-medium text-foreground">{item.name}</span>
+                        <span className="text-xs font-semibold text-foreground">{item.name}</span>
                       </div>
                       <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{item.value}</span>
                     </div>
@@ -951,32 +938,29 @@ export default function Page() {
 
         {/* ── MIDDLE COLUMN ────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4 min-w-0">
-
-          {/* Performance Overview */}
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
-            <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
-              <div className="flex items-start gap-2">
-                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <TrendingUp className="size-3.5 text-primary" />
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm">
+            <div className="flex items-start justify-between gap-2 px-5 pt-5 pb-2">
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <TrendingUp className="size-4 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm leading-tight text-foreground">{t.performance}</p>
+                  <p className="font-bold text-sm leading-tight text-foreground">{t.performance}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {t.performanceDesc} · {numericColumns.length} {t.columns.toLowerCase()}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {/* Mode toggle */}
                 <div className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5">
                   {(["overlay", "single"] as const).map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setSeriesMode(mode)}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
+                      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
                         seriesMode === mode
-                          ? "bg-background text-foreground shadow-sm"
+                          ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -984,11 +968,10 @@ export default function Page() {
                     </button>
                   ))}
                 </div>
-                {/* Metric select */}
                 <select
                   value={activeMetric}
                   onChange={(e) => setActiveMetric(e.target.value)}
-                  className="h-7 rounded-lg border border-border/60 bg-background px-2 text-[11px] text-foreground shadow-sm outline-none transition-colors hover:border-primary/50 focus:border-primary"
+                  className="h-7 rounded-lg border border-border/60 bg-background px-2 text-[11px] text-foreground font-semibold shadow-xs outline-none transition-colors hover:border-primary/50 focus:border-primary"
                 >
                   {numericColumns.map((col) => (
                     <option key={col} value={col}>
@@ -998,7 +981,7 @@ export default function Page() {
                 </select>
               </div>
             </div>
-            <div className="px-2 pb-3">
+            <div className="px-3 pb-4">
               {chartRows.length && visibleSeries.length ? (
                 <MeasuredChart className="h-[200px] min-h-[200px] w-full">
                   {({ width, height }) => (
@@ -1044,17 +1027,15 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Data Preview + Descriptive Stats */}
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
-            {/* Tab header */}
-            <div className="flex items-center justify-between border-b border-border/40 px-4 pt-3 pb-0">
-              <div className="flex gap-0">
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm flex-1">
+            <div className="flex items-center justify-between border-b border-border/40 px-5 pt-4 pb-0">
+              <div className="flex gap-1">
                 {(["raw", "stats"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-2.5 text-xs font-semibold transition-all border-b-2 -mb-px ${
+                    className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 -mb-px ${
                       activeTab === tab
                         ? "border-primary text-primary"
                         : "border-transparent text-muted-foreground hover:text-foreground"
@@ -1064,20 +1045,19 @@ export default function Page() {
                   </button>
                 ))}
               </div>
-              <span className="text-[10px] text-muted-foreground pb-2">
+              <span className="text-[10px] font-semibold text-muted-foreground pb-2">
                 {previewColumns.length} {t.columnsShown}
               </span>
             </div>
 
-            {/* Raw Preview */}
             {activeTab === "raw" && (
               <div className="overflow-auto max-h-[360px]">
-                <table className="w-full min-w-max text-xs">
-                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-xs">
                     <tr className="border-b border-border/40">
-                      <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-10">#</th>
+                      <th className="px-4 py-3 text-left font-bold text-muted-foreground w-10">#</th>
                       {previewColumns.map((col) => (
-                        <th key={col} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                        <th key={col} className="px-4 py-3 text-left font-bold text-muted-foreground whitespace-nowrap">
                           {col}
                         </th>
                       ))}
@@ -1089,11 +1069,11 @@ export default function Page() {
                         key={JSON.stringify(row)}
                         className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5"
                       >
-                        <td className="px-3 py-2 font-medium text-muted-foreground">{ri + 1}</td>
+                        <td className="px-4 py-2.5 font-medium text-muted-foreground">{ri + 1}</td>
                         {previewColumns.map((col) => (
-                          <td key={col} className="max-w-40 truncate px-3 py-2 text-foreground/80" title={String(row[col] ?? "")}>
+                          <td key={col} className="px-4 py-2.5 text-foreground/80 break-words max-w-xs" title={String(row[col] ?? "")}>
                             {isMissing(row[col]) ? (
-                              <span className="text-muted-foreground/50">—</span>
+                              <span className="text-muted-foreground/40">—</span>
                             ) : (
                               String(row[col])
                             )}
@@ -1103,7 +1083,7 @@ export default function Page() {
                     ))}
                     {preview.length === 0 && (
                       <tr>
-                        <td colSpan={previewColumns.length + 1} className="px-3 py-10 text-center text-muted-foreground">
+                        <td colSpan={previewColumns.length + 1} className="px-4 py-10 text-center text-muted-foreground">
                           {t.noPreview}
                         </td>
                       </tr>
@@ -1113,14 +1093,13 @@ export default function Page() {
               </div>
             )}
 
-            {/* Descriptive Stats */}
             {activeTab === "stats" && (
               <div className="overflow-auto max-h-[360px]">
-                <table className="w-full min-w-max text-xs">
-                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-xs">
                     <tr className="border-b border-border/40">
                       {["Column", t.mean, t.median, t.std, t.min, t.max, t.skewness].map((h) => (
-                        <th key={h} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                        <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground whitespace-nowrap">
                           {h}
                         </th>
                       ))}
@@ -1132,19 +1111,19 @@ export default function Page() {
                         key={stat.column}
                         className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5"
                       >
-                        <td className="px-3 py-2 font-semibold text-foreground">{stat.column}</td>
-                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.mean, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.median, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.std, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.min, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.max, 3)}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-4 py-2.5 font-bold text-foreground">{stat.column}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-foreground/80">{numberText(stat.mean, 3)}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-foreground/80">{numberText(stat.median, 3)}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-foreground/80">{numberText(stat.std, 3)}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-foreground/80">{numberText(stat.min, 3)}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-foreground/80">{numberText(stat.max, 3)}</td>
+                        <td className="px-4 py-2.5">
                           <Badge
                             variant="outline"
-                            className={`text-[10px] py-0 px-1.5 ${
+                            className={`text-[10px] py-0.5 px-2 font-bold ${
                               typeof stat.skewness === "number" && Math.abs(stat.skewness) >= 1
                                 ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                : "text-foreground/70"
+                                : "text-foreground/70 border-border/60"
                             }`}
                           >
                             {numberText(stat.skewness, 3)}
@@ -1154,7 +1133,7 @@ export default function Page() {
                     ))}
                     {numericStats.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">
+                        <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
                           {t.noPreview}
                         </td>
                       </tr>
@@ -1168,13 +1147,13 @@ export default function Page() {
 
         {/* ── RIGHT COLUMN ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Bot className="size-3.5 text-primary" />
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm flex-1">
+            <div className="flex items-center justify-between px-5 pt-5 pb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Bot className="size-4 text-primary" />
                 </div>
-                <p className="font-semibold text-sm text-foreground">{t.insights}</p>
+                <p className="font-bold text-sm text-foreground">{t.insights}</p>
               </div>
               <button
                 type="button"
@@ -1186,7 +1165,7 @@ export default function Page() {
                 <RefreshCw className={`size-3.5 ${regenerating ? "animate-spin" : ""}`} />
               </button>
             </div>
-            <div className="space-y-2 px-4 pb-4">
+            <div className="space-y-2.5 px-5 pb-5 pt-1">
               {insights.map((item) => (
                 <InsightItem key={item.value} item={item} />
               ))}
@@ -1196,22 +1175,22 @@ export default function Page() {
       </div>
 
       {/* ── Report Card ─────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
-        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Download className="size-4 text-primary" />
+      <div className="rounded-2xl border border-border/60 bg-card shadow-sm py-1">
+        <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Download className="size-5 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-sm text-foreground">{t.report}</p>
-              <p className="text-xs text-muted-foreground">{t.reportDesc}</p>
+              <p className="font-bold text-sm text-foreground">{t.report}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t.reportDesc}</p>
             </div>
           </div>
           <Button
             size="sm"
             disabled={!dataset || exporting}
             onClick={() => void handleReport()}
-            className="shrink-0 gap-1.5 rounded-xl text-xs font-semibold"
+            className="shrink-0 gap-1.5 rounded-xl text-xs font-bold px-4 shadow-xs"
           >
             {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
             {t.exportPdf}
