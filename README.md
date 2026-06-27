@@ -982,21 +982,22 @@ docker run -p 8000:7860 \
 3. Set **Root Directory** ke `frontend`
 4. Tambahkan Environment Variable:
    ```
-   NEXT_PUBLIC_API_URL = https://your-hf-space.hf.space
+   NEXT_PUBLIC_API_URL = https://your-backend.up.railway.app
    ```
-5. Deploy otomatis saat push ke `main`
+5. Deploy otomatis saat push ke `master`
 
-### Backend → Hugging Face Spaces
+### Backend → Railway
 
-1. Buat Space baru di [huggingface.co/spaces](https://huggingface.co/spaces) (pilih **Docker** SDK)
-2. Push folder `backend/` ke repository Space tersebut
-3. Tambahkan **Secrets** di Settings Space:
+1. Hubungkan repository GitHub Anda di [railway.app](https://railway.app)
+2. Tambahkan Service dari repository Anda, lalu di tab **Settings** atur **Root Directory** ke `backend` (Railway secara otomatis akan membaca `Dockerfile` di dalam folder tersebut).
+3. Tambahkan **Variables** di dashboard Railway:
    ```
    AUTH_SECRET_KEY = your-production-secret
    GEMINI_API_KEY  = your-gemini-key
    GROQ_API_KEY    = your-groq-key
    ```
-4. Space akan otomatis build & deploy via `Dockerfile`
+4. Generate domain publik di bagian **Settings** service backend Anda di Railway. Domain tersebut digunakan sebagai nilai `NEXT_PUBLIC_API_URL` pada konfigurasi Vercel Anda.
+
 
 ---
 

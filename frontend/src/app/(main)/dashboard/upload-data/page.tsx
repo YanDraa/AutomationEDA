@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -35,7 +36,7 @@ import {
 
 // â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const API_BASE = "https://yandraa-my-fastapi-backend.hf.space";
+const API_BASE = BACKEND_URL;
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".txt", ".json"] as const;
 type AcceptedExt = (typeof ACCEPTED_EXTENSIONS)[number];
@@ -187,7 +188,7 @@ export default function Page() {
         const message =
           e instanceof Error
             ? e.message
-            : "Failed to process file. Ensure backend is running at https://yandraa-my-fastapi-backend.hf.space.";
+            : `Failed to process file. Ensure backend is running at ${BACKEND_URL}.`;
         setError(message);
       } finally {
         setIsParsing(false);

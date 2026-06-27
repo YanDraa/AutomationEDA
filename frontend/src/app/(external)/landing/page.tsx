@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -576,7 +577,7 @@ function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
     setLoading(true);
 
     try {
-      const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/auth/login", {
+      const res = await fetch(BACKEND_URL + "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

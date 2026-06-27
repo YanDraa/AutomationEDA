@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Copy, Database, ShieldCheck } from "lucide-react";
@@ -26,7 +27,7 @@ export function MetricCards() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
+    fetch(BACKEND_URL + "/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiDataset) => { if (d.activated) setApi(d); })
       .catch(() => {});

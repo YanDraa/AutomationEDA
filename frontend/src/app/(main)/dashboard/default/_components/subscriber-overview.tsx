@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,7 +68,7 @@ export function SubscriberOverview() {
 
   useEffect(() => {
     if (!dataset) { setApiData(null); return; }
-    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
+    fetch(BACKEND_URL + "/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResponse) => setApiData(d))
       .catch(() => {});

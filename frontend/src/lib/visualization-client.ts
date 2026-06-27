@@ -1,4 +1,4 @@
-﻿export const BACKEND_URL = "https://yandraa-my-fastapi-backend.hf.space";
+﻿export { BACKEND_URL } from "@/lib/config";
 
 export type HighchartsOptions = Record<string, unknown>;
 

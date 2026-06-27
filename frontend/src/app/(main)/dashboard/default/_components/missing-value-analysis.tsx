@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -18,7 +19,7 @@ export function MissingValueAnalysis() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
+    fetch(BACKEND_URL + "/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});

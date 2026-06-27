@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import type React from "react";
 
@@ -44,7 +45,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
 
   const refreshDataset = useCallback(async () => {
     try {
-      const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/data/me", {
+      const res = await fetch(BACKEND_URL + "/api/data/me", {
         credentials: "include",
       });
       if (!res.ok) { setDatasetState(null); return; }
@@ -103,7 +104,7 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
   const form = new FormData();
   form.append("file", file);
 
-  const res = await fetch("https://yandraa-my-fastapi-backend.hf.space/api/upload", {
+  const res = await fetch(BACKEND_URL + "/api/upload", {
     method: "POST",
     body: form,
     credentials: "include",
@@ -127,7 +128,7 @@ export async function simulateDatasetFromFile(file: File): Promise<DatasetInfo> 
     } catch {
       if (res.status === 0 || res.status >= 500) {
         detail =
-          "Backend tidak merespons. Pastikan server berjalan di https://yandraa-my-fastapi-backend.hf.space";
+          `Backend tidak merespons. Pastikan server berjalan di ${BACKEND_URL}`;
       }
     }
     throw new Error(detail);

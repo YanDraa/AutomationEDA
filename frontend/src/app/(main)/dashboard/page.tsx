@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useCallback, useMemo, useState } from "react";
 
@@ -55,7 +56,7 @@ export default function Page() {
         const message =
           e instanceof Error
             ? e.message
-            : "Gagal membaca file. Pastikan backend berjalan di https://yandraa-my-fastapi-backend.hf.space.";
+            : `Gagal membaca file. Pastikan backend berjalan di ${BACKEND_URL}.`;
         setError(message);
       } finally {
         setIsParsing(false);

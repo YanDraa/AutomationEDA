@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -27,7 +28,7 @@ export function DatasetComposition() {
 
   useEffect(() => {
     if (!dataset) { setApi(null); return; }
-    fetch("https://yandraa-my-fastapi-backend.hf.space/api/current-dataset", { credentials: "include" })
+    fetch(BACKEND_URL + "/api/current-dataset", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => { if (d.activated) setApi(d); })
       .catch(() => {});

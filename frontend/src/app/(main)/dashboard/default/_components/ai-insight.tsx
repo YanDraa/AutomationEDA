@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
@@ -49,7 +50,7 @@ export function AiInsight() {
     if (!dataset) return;
     setLoading(true);
     setError(null);
-    fetch("https://yandraa-my-fastapi-backend.hf.space/api/interpretation", { credentials: "include" })
+    fetch(BACKEND_URL + "/api/interpretation", { credentials: "include" })
       .then((r) => r.json())
       .then((d: ApiResp) => {
         if (d.status === "success" && d.result) setResult(d.result);

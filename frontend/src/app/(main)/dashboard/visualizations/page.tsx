@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import { BACKEND_URL } from "@/lib/config";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +33,7 @@ import { HighchartsChart } from "@/components/visualizations/highcharts-chart";
 import type { HighchartsOptions } from "@/lib/visualization-client";
 
 // â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const API_BASE = "https://yandraa-my-fastapi-backend.hf.space";
+const API_BASE = BACKEND_URL;
 
 type ColumnClassification = {
   type: "Categorical (Qualitative)" | "Discrete Numeric" | "Continuous Numeric";

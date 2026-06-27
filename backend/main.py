@@ -91,6 +91,7 @@ FRONTEND_ORIGIN = "http://localhost:3000"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_ORIGIN],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -124,7 +125,8 @@ async def auth_login(req: LoginRequest) -> JSONResponse:
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         path="/",
         max_age=ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 7 days in seconds
     )
@@ -153,7 +155,12 @@ async def auth_me(request: Request) -> Dict[str, Any]:
 async def auth_logout() -> JSONResponse:
     """Clear the session cookie."""
     response = JSONResponse(content={"status": "success", "message": "Logged out."})
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        samesite="none",
+        secure=True,
+    )
     return response
 
 
