@@ -45,15 +45,13 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             "[html[data-content-layout=centered]_&>*]:mx-auto",
             "[html[data-content-layout=centered]_&>*]:w-full",
             "[html[data-content-layout=centered]_&>*]:max-w-screen-2xl",
-            "peer-data-[state=collapsed]:[html[data-content-layout=centered]_&>*]:max-w-none",
             "peer-data-[variant=inset]:border",
             "[--dashboard-header-height:--spacing(12)]",
-            "flex flex-col h-svh max-h-svh overflow-hidden min-w-0",
           )}
         >
           <header
             className={cn(
-              "flex h-12 shrink-0 items-center gap-2 border-b transition-all duration-200 ease-in-out",
+              "flex h-12 shrink-0 items-center gap-2 border-b transition-[height,opacity,margin,padding] duration-200 ease-linear",
               // Saat sidebar collapse (icon/offcanvas), navbar ikut mengecil/menghilang agar layout lebih rapih.
               // - icon: hanya tinggi yang berkurang (minim shift)
               "group-has-data-[collapsible=icon]/sidebar-wrapper:h-9",
@@ -80,7 +78,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             </div>
           </header>
           {/* Pages can set data-content-padding="false" to render full-bleed app layouts. */}
-          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto p-4 md:p-6 transition-all duration-200 ease-in-out">{children}</div>
+          <div className="h-full p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </DatasetProvider>

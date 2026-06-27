@@ -129,7 +129,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
+      <div className="flex w-full flex-col gap-6 overflow-hidden px-2">
         <div>
           <h1 className="font-semibold text-2xl">Data Preview</h1>
           <p className="mt-1 text-muted-foreground text-sm">
@@ -163,7 +163,7 @@ export default function Page() {
   // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
+    <div className="flex min-w-0 w-full flex-col gap-4 overflow-hidden px-2">
       {/* Header */}
       <div>
         <h1 className="font-semibold text-xl">Data Preview</h1>

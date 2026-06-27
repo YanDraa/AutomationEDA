@@ -587,7 +587,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div className="@container/main flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
+      <div className="@container/main flex flex-col gap-4 md:gap-6">
         <Skeleton className="h-24 rounded-xl" />
         <div className="grid gap-4 lg:grid-cols-4">
           {["rows", "duplicates", "quality", "columns"].map((item) => (
@@ -602,7 +602,7 @@ export default function Page() {
   const previewColumns = columns.slice(0, 10);
 
   return (
-    <div className="@container/main flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
+    <div className="@container/main flex min-w-0 flex-col gap-4 md:gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="font-semibold text-2xl tracking-tight">{t.title}</h1>
         <p className="max-w-3xl text-muted-foreground text-sm">{t.subtitle}</p>
