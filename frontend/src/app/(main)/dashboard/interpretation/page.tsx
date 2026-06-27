@@ -48,7 +48,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
+    <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl">Interpretation</h1>

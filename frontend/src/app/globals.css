@@ -137,9 +137,15 @@ These serve as the fallback; there is no separate default.css file. */
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
   }
   html {
     @apply font-sans;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
   }
 }
 
@@ -238,4 +244,16 @@ html {
 
 .disable-transitions * {
   transition: none !important;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
+[data-slot="sidebar-wrapper"] {
+  overflow-x: hidden;
 }

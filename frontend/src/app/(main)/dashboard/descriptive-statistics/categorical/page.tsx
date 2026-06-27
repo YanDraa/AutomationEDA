@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -89,7 +89,7 @@ export default function Page() {
   const columns = stats ? Object.keys(stats) : [];
 
   return (
-    <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
+    <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl">Statistik Kategorikal</h1>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -515,7 +515,7 @@ export default function Page() {
   const infoY = varY ? schemaData[varY] : null;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden flex flex-col gap-6 p-4 md:p-6 lg:p-8">
+    <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden w-full max-w-full transition-all duration-200 ease-in-out">
       
       {/* Toast Notification Bar */}
       {notification && (
