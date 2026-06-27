@@ -1,5 +1,6 @@
-﻿import { BACKEND_URL } from "@/lib/config";
-"use client";
+﻿"use client";
+
+import { BACKEND_URL } from "@/lib/config";
 
 import { useEffect, useState } from "react";
 import { Copy, Database, ShieldCheck } from "lucide-react";
