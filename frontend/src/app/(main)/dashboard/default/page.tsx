@@ -8,6 +8,8 @@ import {
   BarChart3,
   Bot,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Database,
   Download,
   FileSpreadsheet,
@@ -18,17 +20,15 @@ import {
   RefreshCw,
   Sparkles,
   Table2,
+  TrendingUp,
   Upload,
   UploadCloud,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type DatasetInfo, useDataset } from "@/context/dataset-context";
 import { generateAndDownloadReport } from "@/lib/reports-client";
 import { BACKEND_URL } from "@/lib/visualization-client";
@@ -78,47 +78,45 @@ type AnalyzePayload = {
 const DICT = {
   en: {
     title: "Automated EDA Dashboard",
-    subtitle:
-      "A premium dataset-agnostic command center for upload, health checks, trends, preview, statistics, and AI-assisted insights.",
+    subtitle: "Dataset command center — upload, health check, trends, statistics & AI insights.",
     uploadTitle: "Dataset Control",
     uploadDesc: "Drop a dataset to instantly refresh every panel.",
-    dropIdle: "Drag a CSV, XLSX, TXT, or JSON file here",
+    dropIdle: "Drag a CSV / XLSX / JSON",
     dropActive: "Drop to analyze",
-    chooseFile: "Choose file",
+    chooseFile: "Choose File",
     processing: "Processing",
     activeDataset: "Active dataset",
     noDataset: "No dataset loaded",
-    rows: "Rows",
-    columns: "Columns",
-    duplicates: "Duplicates",
-    quality: "Quality score",
-    composition: "Dataset composition",
+    rows: "Total Rows",
+    columns: "Total Columns",
+    duplicates: "Duplicate Rows",
+    quality: "Quality Score",
+    composition: "Dataset Composition",
     compositionDesc: "Detected field mix based on dynamic Object.keys mapping.",
     numeric: "Numeric",
     categorical: "Categorical",
     empty: "Empty",
-    performance: "Performance overview",
-    performanceDesc: "Smooth area-spline visualization for every detected numeric column.",
+    performance: "Performance Overview",
+    performanceDesc: "Numeric column trends",
     overlay: "Overlay",
     isolate: "Isolate",
     selectMetric: "Select metric",
-    preview: "Dataset preview",
-    previewDesc: "Switch between raw records and computed descriptive statistics.",
-    rawPreview: "Raw data preview",
-    statsSummary: "Descriptive statistics",
+    preview: "Raw Preview",
+    statsSummary: "Descriptive Stats",
+    rawPreview: "Raw Preview",
     mean: "Mean",
     median: "Median",
     std: "Std Dev",
     min: "Min",
     max: "Max",
     skewness: "Skewness",
-    insights: "Smart insights feed",
+    insights: "Smart Insights",
     insightsDesc: "Grouped, expandable observations generated from the active dataset state.",
     overview: "Overview",
-    numericalAnomalies: "Numerical column anomalies",
-    categoricalTrends: "Categorical value trends",
-    cleanData: "Clean data",
-    information: "Information",
+    numericalAnomalies: "Numerical Anomalies",
+    categoricalTrends: "Categorical Trends",
+    cleanData: "Clean Data",
+    information: "Info",
     notice: "Notice",
     regenerate: "Regenerate",
     regenerating: "Regenerating",
@@ -129,49 +127,49 @@ const DICT = {
     uploadError: "Unable to analyze dataset.",
     fetchError: "Unable to load the active dataset.",
     reportError: "Unable to generate the report.",
+    exportPdf: "Export PDF",
+    columnsShown: "columns shown",
   },
   id: {
     title: "Dashboard EDA Otomatis",
-    subtitle:
-      "Pusat analisis premium yang adaptif untuk unggah data, audit kualitas, tren, preview, statistik, dan insight AI.",
-    uploadTitle: "Kontrol Dataset",
+    subtitle: "Pusat komando dataset — unggah, cek kesehatan, tren, statistik & insight AI.",
+    uploadTitle: "Dataset Control",
     uploadDesc: "Letakkan dataset untuk memperbarui seluruh panel secara instan.",
-    dropIdle: "Seret file CSV, XLSX, TXT, atau JSON ke sini",
+    dropIdle: "Seret file CSV / XLSX / JSON",
     dropActive: "Lepaskan untuk analisis",
-    chooseFile: "Pilih file",
+    chooseFile: "Pilih File",
     processing: "Memproses",
     activeDataset: "Dataset aktif",
     noDataset: "Belum ada dataset",
-    rows: "Baris",
-    columns: "Kolom",
+    rows: "Total Baris",
+    columns: "Total Kolom",
     duplicates: "Duplikat",
-    quality: "Skor kualitas",
-    composition: "Komposisi dataset",
+    quality: "Skor Kualitas",
+    composition: "Komposisi Dataset",
     compositionDesc: "Campuran field terdeteksi lewat pemetaan Object.keys dinamis.",
     numeric: "Numerik",
     categorical: "Kategorikal",
     empty: "Kosong",
-    performance: "Ikhtisar performa",
-    performanceDesc: "Visualisasi area-spline halus untuk semua kolom numerik yang terdeteksi.",
+    performance: "Ikhtisar Performa",
+    performanceDesc: "Tren kolom numerik",
     overlay: "Overlay",
     isolate: "Isolasi",
     selectMetric: "Pilih metrik",
-    preview: "Preview dataset",
-    previewDesc: "Beralih antara data mentah dan ringkasan statistik deskriptif.",
-    rawPreview: "Preview data mentah",
-    statsSummary: "Statistik deskriptif",
+    preview: "Preview Mentah",
+    statsSummary: "Statistik Deskriptif",
+    rawPreview: "Preview Mentah",
     mean: "Mean",
     median: "Median",
     std: "Std Dev",
     min: "Min",
     max: "Max",
     skewness: "Skewness",
-    insights: "Feed insight pintar",
+    insights: "Smart Insights",
     insightsDesc: "Observasi terkelompok dan dapat dibuka dari kondisi dataset aktif.",
     overview: "Ikhtisar",
-    numericalAnomalies: "Anomali kolom numerik",
-    categoricalTrends: "Tren nilai kategorikal",
-    cleanData: "Data bersih",
+    numericalAnomalies: "Anomali Numerik",
+    categoricalTrends: "Tren Kategorikal",
+    cleanData: "Data Bersih",
     information: "Informasi",
     notice: "Catatan",
     regenerate: "Regenerasi",
@@ -183,11 +181,13 @@ const DICT = {
     uploadError: "Dataset gagal dianalisis.",
     fetchError: "Dataset aktif gagal dimuat.",
     reportError: "Laporan gagal dibuat.",
+    exportPdf: "Export PDF",
+    columnsShown: "kolom ditampilkan",
   },
 } satisfies Record<Lang, Record<string, string>>;
 
-const DONUT_COLORS = ["#22c55e99", "#3b82f699", "#f59e0b99"];
-const SERIES_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6"];
+const DONUT_COLORS = ["#22c55e", "#3b82f6", "#f59e0b"];
+const SERIES_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6"];
 
 function calculateDataQualityScore({
   totalRows,
@@ -201,11 +201,9 @@ function calculateDataQualityScore({
   duplicateRows: number;
 }) {
   if (totalRows <= 0 || totalColumns <= 0) return 100;
-
   const totalCells = totalRows * totalColumns;
   const missingPenalty = (missingCells / totalCells) * 70;
   const duplicatePenalty = (duplicateRows / totalRows) * 30;
-
   return Math.max(0, Math.min(100, Math.round(100 - missingPenalty - duplicatePenalty)));
 }
 
@@ -316,41 +314,34 @@ function buildInsights(params: {
       value: "overview",
       title: t.overview,
       badge: duplicateCount === 0 && missingPct < 1 ? t.cleanData : t.notice,
-      badgeClass:
-        duplicateCount === 0 && missingPct < 1
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      badgeVariant: duplicateCount === 0 && missingPct < 1 ? "success" : "warning",
       icon: Sparkles,
       lines: [
-        `${numberText(totalRows, 0)} rows and ${numberText(totalColumns, 0)} columns are active in this EDA session.`,
-        `${numberText(missingPct, 2)}% missing cells and ${numberText(duplicateCount, 0)} duplicate rows were detected.`,
+        `${numberText(totalRows, 0)} rows and ${numberText(totalColumns, 0)} columns are active.`,
+        `${numberText(missingPct, 2)}% missing cells and ${numberText(duplicateCount, 0)} duplicate rows detected.`,
       ],
     },
     {
       value: "numeric",
       title: t.numericalAnomalies,
       badge: skewed.length ? t.notice : t.information,
-      badgeClass: skewed.length
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-        : "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+      badgeVariant: skewed.length ? "warning" : "info",
       icon: Activity,
       lines: skewed.length
         ? skewed
             .slice(0, 4)
-            .map(
-              (stat) => `${stat.column}: skewness ${numberText(stat.skewness, 2)} suggests an asymmetric distribution.`,
-            )
-        : ["No strong skewness signal was found in the detected numerical columns."],
+            .map((stat) => `${stat.column}: skewness ${numberText(stat.skewness, 2)} suggests asymmetric distribution.`)
+        : ["No strong skewness signal found in detected numerical columns."],
     },
     {
       value: "categorical",
       title: t.categoricalTrends,
       badge: t.information,
-      badgeClass: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+      badgeVariant: "info",
       icon: Layers3,
       lines: [
-        `${numberText(categoricalCount, 0)} categorical columns were detected from the current preview structure.`,
-        "Use categorical fields as grouping dimensions when interpreting distributions and relationships.",
+        `${numberText(categoricalCount, 0)} categorical columns detected from preview structure.`,
+        "Use categorical fields as grouping dimensions when interpreting distributions.",
       ],
     },
   ];
@@ -367,13 +358,13 @@ function PremiumTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border bg-popover/95 px-3 py-2 text-popover-foreground text-xs shadow-xl backdrop-blur">
-      <p className="mb-1 font-semibold">{label}</p>
+    <div className="rounded-xl border border-border/50 bg-background/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md">
+      <p className="mb-1.5 font-semibold text-foreground">{label}</p>
       {payload.map((item) => (
-        <div key={item.name} className="flex items-center gap-2">
+        <div key={item.name} className="flex items-center gap-2 py-0.5">
           <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
           <span className="text-muted-foreground">{item.name}</span>
-          <span className="font-semibold tabular-nums">{numberText(item.value, 2)}</span>
+          <span className="ml-auto font-semibold tabular-nums text-foreground">{numberText(item.value, 2)}</span>
         </div>
       ))}
     </div>
@@ -390,8 +381,8 @@ function DonutTooltip({
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (
-    <div className="rounded-xl border bg-popover/95 px-3 py-2 text-popover-foreground text-xs shadow-xl backdrop-blur">
-      <p className="font-semibold">{item.name}</p>
+    <div className="rounded-xl border border-border/50 bg-background/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md">
+      <p className="font-semibold text-foreground">{item.name}</p>
       <p className="text-muted-foreground">
         {numberText(item.value, 0)} fields · {numberText((item.payload?.percent ?? 0) * 100, 1)}%
       </p>
@@ -406,17 +397,12 @@ function MeasuredChart({ className, children }: { className: string; children: (
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-
     const update = () => {
       const rect = node.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        setSize({
-          width: Math.floor(rect.width),
-          height: Math.floor(rect.height),
-        });
+        setSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
       }
     };
-
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
@@ -430,6 +416,131 @@ function MeasuredChart({ className, children }: { className: string; children: (
   );
 }
 
+// ── Stat Card ─────────────────────────────────────────────────────────────────
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+  accentColor: string;
+}
+
+function StatCard({ label, value, icon: Icon, gradient, iconBg, iconColor, accentColor }: StatCardProps) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${gradient}`}
+    >
+      {/* subtle corner accent */}
+      <div className={`absolute -right-4 -top-4 size-20 rounded-full opacity-10 blur-xl ${accentColor}`} />
+      <div className="relative flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+          <p className="mt-2 font-bold text-3xl tabular-nums tracking-tight text-foreground">
+            {typeof value === "number" ? numberText(value, 0) : value}
+          </p>
+        </div>
+        <div
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+        >
+          <Icon className={`size-5 ${iconColor}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Section Header ─────────────────────────────────────────────────────────────
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+      <div className="flex items-start gap-2">
+        <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="size-3.5 text-primary" />
+        </div>
+        <div>
+          <p className="font-semibold text-sm leading-tight text-foreground">{title}</p>
+          {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+// ── Badge Pill ─────────────────────────────────────────────────────────────────
+function Pill({ variant, children }: { variant: "success" | "warning" | "info"; children: ReactNode }) {
+  const cls = {
+    success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    info: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+  }[variant];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+// ── Insight Accordion Item ──────────────────────────────────────────────────────
+function InsightItem({
+  item,
+}: {
+  item: ReturnType<typeof buildInsights>[number];
+}) {
+  const [open, setOpen] = useState(item.value === "overview");
+  const Icon = item.icon;
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 transition-all duration-200 hover:border-border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30"
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background shadow-sm border border-border/50">
+          <Icon className="size-3.5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-xs text-foreground leading-tight">{item.title}</p>
+          <div className="mt-1">
+            <Pill variant={item.badgeVariant as "success" | "warning" | "info"}>{item.badge}</Pill>
+          </div>
+        </div>
+        {open ? (
+          <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+      {open && (
+        <div className="space-y-1.5 px-3 pb-3">
+          {item.lines.map((line) => (
+            <div
+              key={line}
+              className="flex gap-2 rounded-lg bg-muted/30 px-2.5 py-2 text-xs text-muted-foreground leading-relaxed"
+            >
+              <Info className="mt-0.5 size-3 shrink-0 text-primary/70" />
+              <p>{line}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Page() {
   const [lang, setLang] = useState<Lang>("id");
   const t = DICT[lang];
@@ -444,6 +555,7 @@ export default function Page() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"raw" | "stats">("raw");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -585,16 +697,30 @@ export default function Page() {
     }
   }, [dataset, t.reportError]);
 
+  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="@container/main flex flex-col gap-4 md:gap-6">
-        <Skeleton className="h-24 rounded-xl" />
-        <div className="grid gap-4 lg:grid-cols-4">
-          {["rows", "duplicates", "quality", "columns"].map((item) => (
-            <Skeleton key={item} className="h-32 rounded-xl" />
+      <div className="flex flex-col gap-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-72 rounded-xl" />
+            <Skeleton className="h-4 w-96 rounded-lg" />
+          </div>
+          <Skeleton className="h-9 w-28 rounded-xl" />
+        </div>
+        {/* Stat cards skeleton */}
+        <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <Skeleton className="h-96 rounded-xl" />
+        {/* Main content skeleton */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[260px_1fr_280px]">
+          <Skeleton className="h-[520px] rounded-2xl" />
+          <Skeleton className="h-[520px] rounded-2xl" />
+          <Skeleton className="h-[520px] rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -602,437 +728,496 @@ export default function Page() {
   const previewColumns = columns.slice(0, 10);
 
   return (
-    <div className="@container/main flex min-w-0 flex-col gap-4 md:gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="font-semibold text-2xl tracking-tight">{t.title}</h1>
-        <p className="max-w-3xl text-muted-foreground text-sm">{t.subtitle}</p>
+    <div className="flex min-w-0 flex-col gap-5">
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-bold text-2xl tracking-tight text-foreground">{t.title}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t.subtitle}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!dataset || exporting}
+          onClick={() => void handleReport()}
+          className="shrink-0 gap-1.5 self-start rounded-xl border-border/60 text-xs font-medium shadow-sm hover:shadow-md transition-shadow"
+        >
+          {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+          {t.exportPdf}
+        </Button>
       </div>
 
-      {message ? (
+      {/* ── Alert Banner ────────────────────────────────────────────────── */}
+      {message && (
         <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+          className={`flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium shadow-sm transition-all ${
             message.type === "error"
               ? "border-destructive/25 bg-destructive/5 text-destructive"
               : "border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
           }`}
         >
-          {message.type === "error" ? <AlertTriangle className="size-4" /> : <CheckCircle2 className="size-4" />}
+          {message.type === "error" ? (
+            <AlertTriangle className="size-4 shrink-0" />
+          ) : (
+            <CheckCircle2 className="size-4 shrink-0" />
+          )}
           {message.text}
         </div>
-      ) : null}
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
-        <Card className="overflow-hidden border-border/70 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <UploadCloud className="size-5 text-primary" />
-              {t.uploadTitle}
-            </CardTitle>
-            <CardDescription>{t.uploadDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <label
-              htmlFor="eda-dashboard-upload"
-              onDrop={(event) => {
-                event.preventDefault();
-                setDragging(false);
-                void handleFile(event.dataTransfer.files?.[0]);
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                setDragging(false);
-              }}
-              className={`flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${
-                dragging
-                  ? "scale-[1.01] border-primary bg-primary/5 shadow-lg"
-                  : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
-              }`}
-            >
-              <input
-                id="eda-dashboard-upload"
-                type="file"
-                accept=".csv,.xlsx,.xls,.txt,.json"
-                className="hidden"
-                onChange={(event) => {
-                  void handleFile(event.target.files?.[0]);
-                  event.target.value = "";
+      {/* ── Stat Cards Row ───────────────────────────────────────────────── */}
+      <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label={t.rows}
+          value={totalRows}
+          icon={Grid3X3}
+          gradient="bg-gradient-to-br from-blue-500/5 to-transparent"
+          iconBg="bg-blue-500/10"
+          iconColor="text-blue-500"
+          accentColor="bg-blue-500"
+        />
+        <StatCard
+          label={t.duplicates}
+          value={duplicateCount}
+          icon={Database}
+          gradient="bg-gradient-to-br from-amber-500/5 to-transparent"
+          iconBg="bg-amber-500/10"
+          iconColor="text-amber-500"
+          accentColor="bg-amber-500"
+        />
+        <StatCard
+          label={t.quality}
+          value={`${qualityScore}%`}
+          icon={CheckCircle2}
+          gradient="bg-gradient-to-br from-emerald-500/5 to-transparent"
+          iconBg="bg-emerald-500/10"
+          iconColor="text-emerald-500"
+          accentColor="bg-emerald-500"
+        />
+        <StatCard
+          label={t.columns}
+          value={totalColumns}
+          icon={Table2}
+          gradient="bg-gradient-to-br from-violet-500/5 to-transparent"
+          iconBg="bg-violet-500/10"
+          iconColor="text-violet-500"
+          accentColor="bg-violet-500"
+        />
+      </div>
+
+      {/* ── 3-Column Main Layout ─────────────────────────────────────────── */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[260px_1fr_280px] xl:grid-cols-[280px_1fr_300px]">
+
+        {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+
+          {/* Dataset Control */}
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+            <SectionHeader icon={UploadCloud} title={t.uploadTitle} subtitle={t.uploadDesc} />
+            <div className="px-4 pb-4">
+              <label
+                htmlFor="eda-dashboard-upload"
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  void handleFile(e.dataTransfer.files?.[0]);
                 }}
-              />
-              <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-                {uploading ? (
-                  <Loader2 className="size-5 animate-spin text-primary" />
-                ) : (
-                  <Upload className="size-5 text-primary" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-sm">{dragging ? t.dropActive : t.dropIdle}</p>
-                <p className="mt-1 text-muted-foreground text-xs">{dataset?.fileName ?? t.noDataset}</p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                disabled={uploading}
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById("eda-dashboard-upload")?.click();
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
                 }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                }}
+                className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed p-4 text-center transition-all duration-300 ${
+                  dragging
+                    ? "scale-[1.02] border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                    : "border-border/60 bg-muted/20 hover:border-primary/40 hover:bg-muted/30"
+                }`}
               >
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
-                {uploading ? t.processing : t.chooseFile}
-              </Button>
-            </label>
-          </CardContent>
-        </Card>
+                <input
+                  id="eda-dashboard-upload"
+                  type="file"
+                  accept=".csv,.xlsx,.xls,.txt,.json"
+                  className="hidden"
+                  onChange={(e) => {
+                    void handleFile(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                <div
+                  className={`flex size-10 items-center justify-center rounded-xl transition-all duration-300 ${
+                    dragging ? "bg-primary/15 scale-110" : "bg-muted/50"
+                  }`}
+                >
+                  {uploading ? (
+                    <Loader2 className="size-4.5 animate-spin text-primary" />
+                  ) : (
+                    <Upload className={`size-4.5 ${dragging ? "text-primary" : "text-muted-foreground"}`} />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-xs text-foreground">{dragging ? t.dropActive : t.dropIdle}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground truncate max-w-[180px]">
+                    {dataset?.fileName ?? t.noDataset}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("eda-dashboard-upload")?.click();
+                  }}
+                  className="h-7 rounded-lg px-3 text-xs gap-1.5"
+                >
+                  {uploading ? <Loader2 className="size-3 animate-spin" /> : <FileSpreadsheet className="size-3" />}
+                  {uploading ? t.processing : t.chooseFile}
+                </Button>
+              </label>
+            </div>
+          </div>
 
-        <Card className="overflow-hidden border-border/70 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">{t.composition}</CardTitle>
-            <CardDescription>{t.compositionDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
-              <div className="relative h-44 min-h-44 min-w-0">
-                <MeasuredChart className="h-full min-h-44 min-w-0">
+          {/* Dataset Composition */}
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
+            <SectionHeader icon={BarChart3} title={t.composition} />
+            <div className="px-4 pb-4">
+              {/* Donut + center label */}
+              <div className="relative h-36">
+                <MeasuredChart className="h-full w-full">
                   {({ width, height }) => (
                     <PieChart width={width} height={height}>
                       <defs>
-                        {DONUT_COLORS.map((color, index) => (
-                          <linearGradient key={color} id={`donut-${index}`} x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor={color} stopOpacity={0.95} />
-                            <stop offset="100%" stopColor={color} stopOpacity={0.45} />
-                          </linearGradient>
+                        {DONUT_COLORS.map((color, i) => (
+                          <radialGradient key={color} id={`donut-g-${i}`} cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor={color} stopOpacity={0.9} />
+                            <stop offset="100%" stopColor={color} stopOpacity={0.5} />
+                          </radialGradient>
                         ))}
                       </defs>
                       <Pie
-                        data={composition}
+                        data={composition.length ? composition : [{ name: "—", value: 1 }]}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius={54}
-                        outerRadius={78}
-                        paddingAngle={4}
+                        innerRadius={46}
+                        outerRadius={64}
+                        paddingAngle={3}
                         strokeWidth={0}
                       >
-                        {composition.map((entry, index) => (
-                          <Cell key={entry.name} fill={`url(#donut-${index % DONUT_COLORS.length})`} />
+                        {(composition.length ? composition : [{ name: "—", value: 1 }]).map((entry, i) => (
+                          <Cell
+                            key={entry.name}
+                            fill={composition.length ? `url(#donut-g-${i % DONUT_COLORS.length})` : "#e5e7eb"}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip content={<DonutTooltip />} />
+                      {composition.length > 0 && <Tooltip content={<DonutTooltip />} />}
                     </PieChart>
                   )}
                 </MeasuredChart>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-bold text-2xl tabular-nums">{totalColumns}</span>
-                  <span className="text-muted-foreground text-xs">{t.columns}</span>
+                  <span className="font-bold text-xl tabular-nums">{totalColumns}</span>
+                  <span className="text-[10px] text-muted-foreground">{t.columns.split(" ").pop()}</span>
                 </div>
               </div>
-              <div className="space-y-2">
+
+              {/* Legend */}
+              <div className="mt-2 space-y-1.5">
                 {composition.length ? (
-                  composition.map((item, index) => (
+                  composition.map((item, i) => (
                     <div
                       key={item.name}
-                      className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/20 px-3 py-1.5"
                     >
                       <div className="flex items-center gap-2">
                         <span
-                          className="size-2.5 rounded-full"
-                          style={{ backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length] }}
+                          className="size-2 rounded-full shrink-0"
+                          style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
                         />
-                        <span className="font-medium text-sm">{item.name}</span>
+                        <span className="text-xs font-medium text-foreground">{item.name}</span>
                       </div>
-                      <span className="text-muted-foreground text-xs tabular-nums">{item.value}</span>
+                      <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{item.value}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-sm">{t.noPreview}</p>
+                  <p className="text-center text-xs text-muted-foreground py-2">{t.noPreview}</p>
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: t.rows, value: totalRows, icon: Grid3X3, tone: "from-blue-500/15 to-cyan-500/5" },
-          { label: t.duplicates, value: duplicateCount, icon: Database, tone: "from-amber-500/15 to-orange-500/5" },
-          {
-            label: t.quality,
-            value: `${qualityScore}%`,
-            icon: CheckCircle2,
-            tone: "from-emerald-500/15 to-teal-500/5",
-          },
-          { label: t.columns, value: totalColumns, icon: Table2, tone: "from-violet-500/15 to-fuchsia-500/5" },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <Card
-              key={item.label}
-              className="group overflow-hidden border-border/70 bg-gradient-to-br shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.015] hover:shadow-xl"
-            >
-              <CardContent className={`bg-gradient-to-br ${item.tone} p-4`}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-muted-foreground text-sm">{item.label}</p>
-                  <div className="flex size-9 items-center justify-center rounded-lg border bg-background/60 transition-transform duration-300 group-hover:scale-110">
-                    <Icon className="size-4 text-primary" />
-                  </div>
+        {/* ── MIDDLE COLUMN ────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4 min-w-0">
+
+          {/* Performance Overview */}
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+            <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <TrendingUp className="size-3.5 text-primary" />
                 </div>
-                <p className="mt-3 font-bold text-3xl tabular-nums">
-                  {typeof item.value === "number" ? numberText(item.value, 0) : item.value}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="size-5 text-primary" />
-              {t.performance}
-            </CardTitle>
-            <CardDescription>{t.performanceDesc}</CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-lg border bg-muted/40 p-1">
-              {(["overlay", "single"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setSeriesMode(mode)}
-                  className={`rounded-md px-3 py-1.5 font-medium text-xs transition-all ${
-                    seriesMode === mode
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {mode === "overlay" ? t.overlay : t.isolate}
-                </button>
-              ))}
-            </div>
-            <select
-              value={activeMetric}
-              onChange={(event) => setActiveMetric(event.target.value)}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm shadow-sm outline-none transition-all hover:border-primary/50 focus:border-primary focus:ring-3 focus:ring-primary/15"
-            >
-              {numericColumns.map((column) => (
-                <option key={column} value={column}>
-                  {column}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {chartRows.length && visibleSeries.length ? (
-            <MeasuredChart className="h-[360px] min-h-[360px] min-w-0">
-              {({ width, height }) => (
-                <AreaChart
-                  width={width}
-                  height={height}
-                  data={chartRows}
-                  margin={{ left: 0, right: 16, top: 12, bottom: 0 }}
-                >
-                  <defs>
-                    {visibleSeries.map((series, index) => (
-                      <linearGradient key={series} id={`area-${index}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={SERIES_COLORS[index % SERIES_COLORS.length]} stopOpacity={0.28} />
-                        <stop
-                          offset="100%"
-                          stopColor={SERIES_COLORS[index % SERIES_COLORS.length]}
-                          stopOpacity={0.02}
-                        />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} width={42} />
-                  <Tooltip content={<PremiumTooltip />} />
-                  {visibleSeries.map((series, index) => (
-                    <Area
-                      key={series}
-                      type="monotone"
-                      dataKey={series}
-                      stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
-                      fill={`url(#area-${index})`}
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 5 }}
-                      connectNulls
-                    />
+                <div>
+                  <p className="font-semibold text-sm leading-tight text-foreground">{t.performance}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t.performanceDesc} · {numericColumns.length} {t.columns.toLowerCase()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Mode toggle */}
+                <div className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5">
+                  {(["overlay", "single"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setSeriesMode(mode)}
+                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
+                        seriesMode === mode
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {mode === "overlay" ? t.overlay : t.isolate}
+                    </button>
                   ))}
-                </AreaChart>
-              )}
-            </MeasuredChart>
-          ) : (
-            <div className="flex h-72 items-center justify-center rounded-xl border border-dashed text-muted-foreground text-sm">
-              {t.noPreview}
+                </div>
+                {/* Metric select */}
+                <select
+                  value={activeMetric}
+                  onChange={(e) => setActiveMetric(e.target.value)}
+                  className="h-7 rounded-lg border border-border/60 bg-background px-2 text-[11px] text-foreground shadow-sm outline-none transition-colors hover:border-primary/50 focus:border-primary"
+                >
+                  {numericColumns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="px-2 pb-3">
+              {chartRows.length && visibleSeries.length ? (
+                <MeasuredChart className="h-[200px] min-h-[200px] w-full">
+                  {({ width, height }) => (
+                    <AreaChart
+                      width={width}
+                      height={height}
+                      data={chartRows}
+                      margin={{ left: 0, right: 12, top: 8, bottom: 0 }}
+                    >
+                      <defs>
+                        {visibleSeries.map((s, i) => (
+                          <linearGradient key={s} id={`area-g-${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={SERIES_COLORS[i % SERIES_COLORS.length]} stopOpacity={0.25} />
+                            <stop offset="100%" stopColor={SERIES_COLORS[i % SERIES_COLORS.length]} stopOpacity={0.02} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.06} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }} width={36} />
+                      <Tooltip content={<PremiumTooltip />} />
+                      {visibleSeries.map((s, i) => (
+                        <Area
+                          key={s}
+                          type="monotone"
+                          dataKey={s}
+                          stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                          fill={`url(#area-g-${i})`}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 0 }}
+                          connectNulls
+                        />
+                      ))}
+                    </AreaChart>
+                  )}
+                </MeasuredChart>
+              ) : (
+                <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-border/40 text-xs text-muted-foreground">
+                  {t.noPreview}
+                </div>
+              )}
+            </div>
+          </div>
 
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">{t.preview}</CardTitle>
-          <CardDescription>{t.previewDesc}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="raw" className="gap-4">
-            <TabsList className="w-full justify-start sm:w-fit">
-              <TabsTrigger value="raw">{t.rawPreview}</TabsTrigger>
-              <TabsTrigger value="stats">{t.statsSummary}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="raw">
-              <div className="max-h-[430px] overflow-auto rounded-xl border">
-                <table className="w-full min-w-max text-sm">
-                  <thead className="sticky top-0 z-10 bg-background shadow-sm">
-                    <tr>
-                      <th className="w-12 px-3 py-3 text-left font-semibold text-muted-foreground">#</th>
-                      {previewColumns.map((column) => (
-                        <th key={column} className="px-3 py-3 text-left font-semibold text-muted-foreground">
-                          {column}
+          {/* Data Preview + Descriptive Stats */}
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
+            {/* Tab header */}
+            <div className="flex items-center justify-between border-b border-border/40 px-4 pt-3 pb-0">
+              <div className="flex gap-0">
+                {(["raw", "stats"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-2.5 text-xs font-semibold transition-all border-b-2 -mb-px ${
+                      activeTab === tab
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab === "raw" ? t.rawPreview : t.statsSummary}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[10px] text-muted-foreground pb-2">
+                {previewColumns.length} {t.columnsShown}
+              </span>
+            </div>
+
+            {/* Raw Preview */}
+            {activeTab === "raw" && (
+              <div className="overflow-auto max-h-[360px]">
+                <table className="w-full min-w-max text-xs">
+                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                    <tr className="border-b border-border/40">
+                      <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-10">#</th>
+                      {previewColumns.map((col) => (
+                        <th key={col} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                          {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.slice(0, 10).map((row, rowIndex) => (
-                      <tr key={JSON.stringify(row)} className="border-t odd:bg-muted/20 hover:bg-primary/5">
-                        <td className="px-3 py-2 font-medium text-muted-foreground">{rowIndex + 1}</td>
-                        {previewColumns.map((column) => (
-                          <td key={column} className="max-w-56 truncate px-3 py-2" title={String(row[column] ?? "")}>
-                            {isMissing(row[column]) ? "-" : String(row[column])}
+                    {preview.slice(0, 10).map((row, ri) => (
+                      <tr
+                        key={JSON.stringify(row)}
+                        className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5"
+                      >
+                        <td className="px-3 py-2 font-medium text-muted-foreground">{ri + 1}</td>
+                        {previewColumns.map((col) => (
+                          <td key={col} className="max-w-40 truncate px-3 py-2 text-foreground/80" title={String(row[col] ?? "")}>
+                            {isMissing(row[col]) ? (
+                              <span className="text-muted-foreground/50">—</span>
+                            ) : (
+                              String(row[col])
+                            )}
                           </td>
                         ))}
                       </tr>
                     ))}
+                    {preview.length === 0 && (
+                      <tr>
+                        <td colSpan={previewColumns.length + 1} className="px-3 py-10 text-center text-muted-foreground">
+                          {t.noPreview}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
-            </TabsContent>
-            <TabsContent value="stats">
-              <div className="overflow-auto rounded-xl border">
-                <table className="w-full min-w-max text-sm">
-                  <thead className="sticky top-0 bg-background shadow-sm">
-                    <tr>
-                      {["Column", t.mean, t.median, t.std, t.min, t.max, t.skewness].map((head) => (
-                        <th key={head} className="px-3 py-3 text-left font-semibold text-muted-foreground">
-                          {head}
+            )}
+
+            {/* Descriptive Stats */}
+            {activeTab === "stats" && (
+              <div className="overflow-auto max-h-[360px]">
+                <table className="w-full min-w-max text-xs">
+                  <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                    <tr className="border-b border-border/40">
+                      {["Column", t.mean, t.median, t.std, t.min, t.max, t.skewness].map((h) => (
+                        <th key={h} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                          {h}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {numericStats.map((stat) => (
-                      <tr key={stat.column} className="border-t odd:bg-muted/20 hover:bg-primary/5">
-                        <td className="px-3 py-2 font-medium">{stat.column}</td>
-                        <td className="px-3 py-2 tabular-nums">{numberText(stat.mean, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums">{numberText(stat.median, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums">{numberText(stat.std, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums">{numberText(stat.min, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums">{numberText(stat.max, 3)}</td>
-                        <td className="px-3 py-2 tabular-nums">
+                      <tr
+                        key={stat.column}
+                        className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5"
+                      >
+                        <td className="px-3 py-2 font-semibold text-foreground">{stat.column}</td>
+                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.mean, 3)}</td>
+                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.median, 3)}</td>
+                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.std, 3)}</td>
+                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.min, 3)}</td>
+                        <td className="px-3 py-2 tabular-nums text-foreground/80">{numberText(stat.max, 3)}</td>
+                        <td className="px-3 py-2">
                           <Badge
                             variant="outline"
-                            className={
+                            className={`text-[10px] py-0 px-1.5 ${
                               typeof stat.skewness === "number" && Math.abs(stat.skewness) >= 1
-                                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                : ""
-                            }
+                                ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                : "text-foreground/70"
+                            }`}
                           >
                             {numberText(stat.skewness, 3)}
                           </Badge>
                         </td>
                       </tr>
                     ))}
-                    {numericStats.length === 0 ? (
+                    {numericStats.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">
                           {t.noPreview}
                         </td>
                       </tr>
-                    ) : null}
+                    )}
                   </tbody>
                 </table>
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="size-5 text-primary" />
-              {t.insights}
-            </CardTitle>
-            <CardDescription>{t.insightsDesc}</CardDescription>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={regenerateInsights} disabled={regenerating}>
-            {regenerating ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            {regenerating ? t.regenerating : t.regenerate}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="multiple" defaultValue={["overview"]} className="gap-3">
-            {insights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <AccordionItem key={item.value} value={item.value} className="rounded-xl border bg-muted/15 px-4">
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background shadow-sm">
-                        <Icon className="size-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold">{item.title}</p>
-                        <Badge variant="outline" className={`mt-1 ${item.badgeClass}`}>
-                          {item.badge}
-                        </Badge>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2 pl-12">
-                      {item.lines.map((line) => (
-                        <div
-                          key={line}
-                          className="flex gap-2 rounded-lg bg-background/70 px-3 py-2 text-muted-foreground"
-                        >
-                          <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                          <p>{line}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="border-border/70 shadow-sm">
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold">{t.report}</p>
-            <p className="text-muted-foreground text-sm">{t.reportDesc}</p>
+        {/* ── RIGHT COLUMN ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden flex-1">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Bot className="size-3.5 text-primary" />
+                </div>
+                <p className="font-semibold text-sm text-foreground">{t.insights}</p>
+              </div>
+              <button
+                type="button"
+                onClick={regenerateInsights}
+                disabled={regenerating}
+                className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:opacity-50"
+                title={t.regenerate}
+              >
+                <RefreshCw className={`size-3.5 ${regenerating ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+            <div className="space-y-2 px-4 pb-4">
+              {insights.map((item) => (
+                <InsightItem key={item.value} item={item} />
+              ))}
+            </div>
           </div>
-          <Button className="h-11 shrink-0" disabled={!dataset || exporting} onClick={() => void handleReport()}>
-            {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-            {t.report}
+        </div>
+      </div>
+
+      {/* ── Report Card ─────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Download className="size-4 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-foreground">{t.report}</p>
+              <p className="text-xs text-muted-foreground">{t.reportDesc}</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            disabled={!dataset || exporting}
+            onClick={() => void handleReport()}
+            className="shrink-0 gap-1.5 rounded-xl text-xs font-semibold"
+          >
+            {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            {t.exportPdf}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
