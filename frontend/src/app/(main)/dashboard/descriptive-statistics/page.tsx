@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, Hash, Tag, Upload } from "lucide-react";
+import { BarChart2, Hash, Tag, Upload, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,17 @@ export default function Page() {
   if (!dataset) {
     return (
       <div className="flex w-full max-w-full flex-col items-center justify-center gap-4 overflow-x-hidden py-20 text-center">
-        <div className="rounded-full bg-muted p-4">
-          <BarChart2 className="size-8 text-muted-foreground" />
+        <div className="rounded-2xl bg-primary/10 p-5 shadow-inner">
+          <BarChart2 className="size-10 text-primary" />
         </div>
         <div>
-          <p className="font-medium">Belum ada dataset</p>
-          <p className="mt-1 text-muted-foreground text-sm">Upload file terlebih dahulu.</p>
+          <p className="font-bold text-lg text-foreground">Belum ada dataset yang dimuat</p>
+          <p className="mt-1 text-muted-foreground text-sm max-w-sm">
+            Silakan unggah file dataset terlebih dahulu untuk melakukan analisis statistik deskriptif.
+          </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard"><Upload className="size-4" />Upload Sekarang</Link>
+        <Button asChild size="sm" className="rounded-xl font-semibold shadow-sm mt-2">
+          <Link href="/dashboard/upload-data"><Upload className="size-4 mr-2" />Upload Sekarang</Link>
         </Button>
       </div>
     );
@@ -29,38 +31,55 @@ export default function Page() {
 
   return (
     <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
-      <div>
-        <h1 className="font-semibold text-2xl">Descriptive Statistics</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Pilih jenis analisis statistik deskriptif di bawah ini.
+      <div className="flex flex-col gap-1">
+        <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
+          <BarChart2 className="size-6 text-primary" />
+          Statistik Deskriptif
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Pilih dimensi analisis statistik deskriptif di bawah ini untuk mengeksplorasi atribut data Anda.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+
+      <div className="grid gap-6 sm:grid-cols-2">
         <Link href="/dashboard/descriptive-statistics/numerical">
-          <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-sm">
-            <CardHeader>
-              <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
-                <Hash className="size-5 text-blue-600 dark:text-blue-400" />
+          <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
+            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-blue-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+                <Hash className="size-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <CardTitle className="mt-2 text-base">Statistik Numerikal</CardTitle>
-              <CardDescription>
-                Mean, median, modus, std, variance, IQR, skewness, kurtosis, outlier, dan uji normalitas.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                <ArrowRight className="size-4" />
+              </div>
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">Statistik Numerikal</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Analisis ukuran pemusatan dan penyebaran data: Mean, median, modus, standar deviasi, varians, IQR, skewness, kurtosis, pendeteksian outlier, dan uji normalitas.
+              </p>
+            </div>
+          </div>
         </Link>
+
         <Link href="/dashboard/descriptive-statistics/categorical">
-          <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-sm">
-            <CardHeader>
-              <div className="flex size-10 items-center justify-center rounded-lg bg-purple-500/10">
-                <Tag className="size-5 text-purple-600 dark:text-purple-400" />
+          <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
+            <div className="absolute -right-6 -top-6 size-24 rounded-full bg-purple-500/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-purple-500/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+                <Tag className="size-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <CardTitle className="mt-2 text-base">Statistik Kategorikal</CardTitle>
-              <CardDescription>
-                Frekuensi, persentase, unique values, modus, dan missing values per kolom kategori.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              <div className="flex size-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                <ArrowRight className="size-4" />
+              </div>
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">Statistik Kategorikal</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Analisis distribusi data kualitatif: Tabel frekuensi, persentase kontribusi, jumlah nilai unik (cardinality), modus, dan audit nilai hilang per atribut kategori.
+              </p>
+            </div>
+          </div>
         </Link>
       </div>
     </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -6,8 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-
-import { CheckCircle2, FileSpreadsheet, Trash2, Upload, UploadCloud } from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, Trash2, Upload, UploadCloud, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +62,7 @@ export default function Page() {
         setIsParsing(false);
       }
     },
-    [setDataset],
+    [setDataset, router],
   );
 
   const onDrop: React.DragEventHandler<HTMLLabelElement> = useCallback(
@@ -99,36 +98,40 @@ export default function Page() {
   return (
     <div className="flex w-full max-w-full flex-col gap-6 overflow-x-hidden">
       {/* Header */}
-      <div>
-        <h1 className="font-semibold text-2xl">Upload Data</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Unggah file dataset Anda untuk memulai analisis EDA otomatis.
+      <div className="flex flex-col gap-1">
+        <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
+          <UploadCloud className="size-6 text-primary" />
+          Upload Dataset
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Unggah file dataset Anda untuk memulai analisis EDA otomatis dan eksplorasi data mendalam.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Dropzone */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UploadCloud className="size-5 text-primary" />
-                Unggah File
+          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
+            <CardHeader className="border-b border-border/40 pb-4 bg-muted/20">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Sparkles className="size-4 text-primary" />
+                Area Unggah File
               </CardTitle>
               <CardDescription>
                 Seret & lepas file atau klik area di bawah untuk memilih file dari perangkat Anda.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-4 pt-6">
               <label
                 htmlFor="dataset-upload-input"
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
-                className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${isDragging
-                  ? "border-primary bg-primary/5 scale-[1.01]"
-                  : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
-                  }`}
+                className={`flex min-h-64 cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
+                  isDragging
+                    ? "border-primary bg-primary/10 scale-[1.01] shadow-lg shadow-primary/10"
+                    : "border-border/60 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
+                }`}
               >
                 <input
                   aria-label="Upload dataset"
@@ -138,20 +141,21 @@ export default function Page() {
                   accept={accepted}
                   onChange={onChange}
                 />
-                <div className={`rounded-full p-3 transition-colors ${isDragging ? "bg-primary/10" : "bg-muted"}`}>
-                  <Upload className={`size-6 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                <div className={`rounded-2xl p-4 transition-all duration-300 ${isDragging ? "bg-primary/20 scale-110" : "bg-primary/10"}`}>
+                  <Upload className={`size-8 transition-colors ${isDragging ? "text-primary" : "text-primary/80"}`} />
                 </div>
-                <div>
-                  <p className="font-medium text-sm">
-                    {isDragging ? "Lepaskan file di sini..." : "Seret & lepas file di sini"}
+                <div className="space-y-1">
+                  <p className="font-semibold text-base text-foreground">
+                    {isDragging ? "Lepaskan file di sini..." : "Seret & lepas file dataset Anda"}
                   </p>
-                  <p className="mt-1 text-muted-foreground text-xs">
-                    Mendukung <span className="font-medium">.csv</span>,{" "}
-                    <span className="font-medium">.xlsx</span>, dan{" "}
-                    <span className="font-medium">.txt</span>
+                  <p className="text-muted-foreground text-xs">
+                    Mendukung format <span className="font-semibold text-foreground">.CSV</span>,{" "}
+                    <span className="font-semibold text-foreground">.XLSX</span>,{" "}
+                    <span className="font-semibold text-foreground">.JSON</span>, dan{" "}
+                    <span className="font-semibold text-foreground">.TXT</span>
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3 mt-2">
                   <Button
                     type="button"
                     size="sm"
@@ -160,8 +164,9 @@ export default function Page() {
                       e.preventDefault();
                       (document.getElementById("dataset-upload-input") as HTMLInputElement | null)?.click();
                     }}
+                    className="rounded-xl px-4 font-semibold shadow-sm"
                   >
-                    {isParsing ? "Memproses..." : "Pilih File"}
+                    {isParsing ? "Memproses..." : "Pilih File dari Perangkat"}
                   </Button>
                   {dataset && (
                     <Button
@@ -175,8 +180,9 @@ export default function Page() {
                         setSuccessFile(null);
                         setError(null);
                       }}
+                      className="rounded-xl border-border/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-4 mr-1.5" />
                       Hapus
                     </Button>
                   )}
@@ -185,17 +191,18 @@ export default function Page() {
 
               {/* Error */}
               {error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm">
-                  âš  {error}
+                <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive text-sm font-medium">
+                  <AlertCircle className="size-4 shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
 
               {/* Success */}
               {successFile && !error && (
-                <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-green-700 text-sm dark:text-green-400">
-                  <CheckCircle2 className="size-4 shrink-0" />
+                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>
-                    File <span className="font-medium">"{successFile}"</span> berhasil diunggah. Lihat sidebar untuk detail dataset.
+                    File <span className="font-bold">"{successFile}"</span> berhasil diunggah dan dianalisis.
                   </span>
                 </div>
               )}
@@ -204,54 +211,57 @@ export default function Page() {
         </div>
 
         {/* Info Panel */}
-        <div className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Format yang Didukung</CardTitle>
+        <div className="flex flex-col gap-6">
+          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+              <CardTitle className="text-base font-semibold">Format yang Didukung</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="flex flex-col gap-3 pt-4">
               {[
-                { ext: ".csv", desc: "Comma-Separated Values" },
-                { ext: ".xlsx", desc: "Microsoft Excel" },
-                { ext: ".txt", desc: "Tab/Comma delimited" },
+                { ext: ".CSV", desc: "Comma-Separated Values", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+                { ext: ".XLSX / .XLS", desc: "Microsoft Excel Worksheet", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+                { ext: ".JSON / .TXT", desc: "Structured / Delimited Data", color: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
               ].map((f) => (
-                <div key={f.ext} className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-md bg-primary/10">
-                    <FileSpreadsheet className="size-4 text-primary" />
+                <div key={f.ext} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/40 bg-muted/10">
+                  <div className={`flex size-9 items-center justify-center rounded-lg ${f.color} font-bold text-xs`}>
+                    <FileSpreadsheet className="size-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">{f.ext}</p>
-                    <p className="text-muted-foreground text-xs">{f.desc}</p>
+                    <p className="font-semibold text-xs text-foreground">{f.ext}</p>
+                    <p className="text-muted-foreground text-[11px]">{f.desc}</p>
                   </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Langkah Selanjutnya</CardTitle>
+          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card flex-1">
+            <CardHeader className="border-b border-border/40 pb-3 bg-muted/20">
+              <CardTitle className="text-base font-semibold">Alur Analisis EDA</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex flex-col gap-2.5 pt-4">
               {[
-                "Upload file dataset",
-                "Lihat preview data",
+                "Unggah file dataset",
+                "Periksa integritas & preview data",
                 "Analisis statistik deskriptif",
-                "Eksplorasi visualisasi",
-                "Baca interpretasi AI",
+                "Eksplorasi visualisasi interaktif",
+                "Baca interpretasi & unduh laporan",
               ].map((step, i) => (
-                <div key={step} className="flex items-center gap-2 text-sm">
+                <div key={step} className="flex items-center gap-3 p-2 rounded-lg text-xs">
                   <div
-                    className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${i === 0 && successFile
-                      ? "bg-green-500 text-white"
-                      : i === 0
-                        ? "bg-primary text-primary-foreground"
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                      i === 0 && successFile
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : i === 0
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "bg-muted text-muted-foreground"
-                      }`}
+                    }`}
                   >
-                    {i === 0 && successFile ? "âœ“" : i + 1}
+                    {i === 0 && successFile ? "✓" : i + 1}
                   </div>
-                  <span className={i === 0 && successFile ? "line-through text-muted-foreground" : ""}>{step}</span>
+                  <span className={`font-medium ${i === 0 && successFile ? "line-through text-muted-foreground" : "text-foreground/90"}`}>
+                    {step}
+                  </span>
                 </div>
               ))}
             </CardContent>

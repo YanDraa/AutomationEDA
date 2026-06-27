@@ -12,6 +12,8 @@ import {
   Grid3X3,
   Table2,
   Upload,
+  Sparkles,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,11 +29,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 const API_BASE = BACKEND_URL;
-
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function isMissingValue(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -39,31 +37,27 @@ function isMissingValue(value: unknown): boolean {
   return false;
 }
 
-// â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 function EmptyState() {
   return (
     <div className="flex w-full flex-col items-center justify-center gap-4 overflow-hidden py-20 text-center">
-      <div className="rounded-full bg-muted p-4">
-        <Database className="size-8 text-muted-foreground" />
+      <div className="rounded-2xl bg-primary/10 p-5 shadow-inner">
+        <Database className="size-10 text-primary" />
       </div>
       <div>
-        <p className="font-medium">No dataset loaded</p>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Upload a file first to see data diagnostics and preview.
+        <p className="font-bold text-lg text-foreground">Belum ada dataset yang dimuat</p>
+        <p className="mt-1 text-muted-foreground text-sm max-w-sm">
+          Silakan unggah file dataset terlebih dahulu untuk melihat diagnostik dan sampel data.
         </p>
       </div>
-      <Button asChild size="sm">
+      <Button asChild size="sm" className="rounded-xl font-semibold shadow-sm mt-2">
         <Link href="/dashboard/upload-data">
-          <Upload className="size-4" />
-          Upload Dataset
+          <Upload className="size-4 mr-2" />
+          Unggah Dataset
         </Link>
       </Button>
     </div>
   );
 }
-
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function Page() {
   const router = useRouter();
@@ -77,8 +71,6 @@ export default function Page() {
     if (dataPreview.length === 0) return [];
     return Object.keys(dataPreview[0]);
   }, [dataPreview]);
-
-  // â”€â”€ Auto-fetch on mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     let cancelled = false;
@@ -125,144 +117,127 @@ export default function Page() {
     };
   }, [router]);
 
-  // â”€â”€â”€ Loading State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   if (loading) {
     return (
-      <div className="flex w-full flex-col gap-6 overflow-hidden px-2">
-        <div>
-          <h1 className="font-semibold text-2xl">Data Preview</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
-            Fetching dataset and computing diagnostics...
-          </p>
+      <div className="flex w-full flex-col gap-6 overflow-hidden px-1">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64 rounded-xl" />
+          <Skeleton className="h-4 w-96 rounded-lg" />
         </div>
-        <Card>
-          <CardContent className="flex flex-col gap-3 pt-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
-            ))}
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-96 w-full rounded-2xl" />
       </div>
     );
   }
 
-  // â”€â”€â”€ Empty / No Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   if (!hasData) {
     return <EmptyState />;
   }
-
-  // â”€â”€â”€ Metrics extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const totalRows = (datasetMeta?.total_rows as number) ?? 0;
   const totalCols = (datasetMeta?.total_columns as number) ?? previewColumns.length;
   const duplicatedRows = (datasetMeta?.total_duplicated_rows as number) ?? 0;
   const missingCells = (datasetMeta?.total_missing_cells as number) ?? 0;
 
-  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   return (
-    <div className="flex min-w-0 w-full flex-col gap-4 overflow-hidden px-2">
+    <div className="flex min-w-0 w-full flex-col gap-5 overflow-hidden px-1">
       {/* Header */}
-      <div>
-        <h1 className="font-semibold text-xl">Data Preview</h1>
-        <p className="mt-0.5 text-muted-foreground text-xs">
-          Notebook-level data integrity checks and random sample preview.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
+            <Table2 className="size-6 text-primary" />
+            Data Preview
+          </h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">
+            Diagnostik integritas data dan pratinjau sampel dataset aktif.
+          </p>
+        </div>
+        <Badge variant="outline" className="rounded-xl border-border/60 px-3 py-1 text-xs font-semibold">
+          {totalCols} Kolom Terdeteksi
+        </Badge>
       </div>
 
-      {/* â”€â”€ Notebook Diagnostics Panel â”€â”€ */}
+      {/* Notebook Diagnostics Panel */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {/* Total Rows */}
-        <Card>
-          <CardContent className="py-2">
-            <div className="flex items-center gap-1.5">
-              <Grid3X3 className="size-3.5 text-muted-foreground" />
-              <p className="text-muted-foreground text-xs">Total Rows</p>
+        <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md bg-gradient-to-br from-blue-500/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Baris</p>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10">
+              <Grid3X3 className="size-4 text-blue-500" />
             </div>
-            <p className="mt-0.5 font-bold text-lg">{totalRows.toLocaleString()}</p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 font-bold text-2xl tabular-nums text-foreground">{totalRows.toLocaleString()}</p>
+        </div>
 
         {/* Total Columns */}
-        <Card>
-          <CardContent className="py-2">
-            <div className="flex items-center gap-1.5">
-              <Table2 className="size-3.5 text-muted-foreground" />
-              <p className="text-muted-foreground text-xs">Total Columns</p>
+        <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md bg-gradient-to-br from-violet-500/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Kolom</p>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10">
+              <Table2 className="size-4 text-violet-500" />
             </div>
-            <p className="mt-0.5 font-bold text-lg">{String(totalCols)}</p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 font-bold text-2xl tabular-nums text-foreground">{String(totalCols)}</p>
+        </div>
 
         {/* Duplicated Rows */}
-        <Card
-          className={
-            duplicatedRows > 0
-              ? "border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
-              : undefined
-          }
-        >
-          <CardContent className="py-2">
-            <div className="flex items-center gap-1.5">
-              <Copy className="size-3.5 text-muted-foreground" />
-              <p className="text-muted-foreground text-xs">Duplicated Rows</p>
+        <div className={`group relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+          duplicatedRows > 0
+            ? "border-amber-500/30 bg-amber-500/5"
+            : "border-border/50 bg-card bg-gradient-to-br from-emerald-500/5 to-transparent"
+        }`}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Baris Duplikat</p>
+            <div className={`flex size-8 items-center justify-center rounded-lg ${duplicatedRows > 0 ? "bg-amber-500/15" : "bg-emerald-500/10"}`}>
+              <Copy className={`size-4 ${duplicatedRows > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-500"}`} />
             </div>
-            <p className="mt-0.5 font-bold text-lg">
-              {duplicatedRows.toLocaleString()}
-            </p>
-            {duplicatedRows > 0 && (
-              <div className="mt-0.5 flex items-center gap-1 text-amber-600 text-[11px] dark:text-amber-400">
-                <AlertTriangle className="size-3" />
-                <span className="font-medium">{duplicatedRows} duplicates detected</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 font-bold text-2xl tabular-nums text-foreground">{duplicatedRows.toLocaleString()}</p>
+        </div>
 
         {/* Total Missing Cells */}
-        <Card
-          className={
-            missingCells > 0
-              ? "border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
-              : undefined
-          }
-        >
-          <CardContent className="py-2">
-            <div className="flex items-center gap-1.5">
-              <AlertTriangle className="size-3.5 text-muted-foreground" />
-              <p className="text-muted-foreground text-xs">Total Missing Cells</p>
+        <div className={`group relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+          missingCells > 0
+            ? "border-destructive/30 bg-destructive/5"
+            : "border-border/50 bg-card bg-gradient-to-br from-emerald-500/5 to-transparent"
+        }`}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nilai Hilang (NaN)</p>
+            <div className={`flex size-8 items-center justify-center rounded-lg ${missingCells > 0 ? "bg-destructive/15" : "bg-emerald-500/10"}`}>
+              <AlertTriangle className={`size-4 ${missingCells > 0 ? "text-destructive" : "text-emerald-500"}`} />
             </div>
-            <p className="mt-0.5 font-bold text-lg">
-              {missingCells.toLocaleString()}
-            </p>
-            {missingCells > 0 && (
-              <div className="mt-0.5 text-red-600 text-[11px] dark:text-red-400">
-                <span className="font-medium">{missingCells} NaN/empty values across dataset</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 font-bold text-2xl tabular-nums text-foreground">{missingCells.toLocaleString()}</p>
+        </div>
       </div>
 
-      {/* â”€â”€ Data Preview Table (max 10-row random sample) â”€â”€ */}
+      {/* Data Preview Table */}
       {dataPreview.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Data Sample Preview</CardTitle>
-            <CardDescription>
-              {String(dataPreview.length)} random rows Â· {String(totalCols)} columns Â· {totalRows.toLocaleString()} total rows
-            </CardDescription>
+        <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card">
+          <CardHeader className="border-b border-border/40 pb-3 bg-muted/20 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" />
+                Sampel Data ({dataPreview.length} Baris Acak)
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Pratinjau struktur dan isi nilai dari total {totalRows.toLocaleString()} baris data.
+              </CardDescription>
+            </div>
           </CardHeader>
-          <CardContent className="min-w-0 p-0">
-            <div className="w-full overflow-x-hidden">
-              <Table className="w-full table-fixed">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-card w-10">#</TableHead>
+          <CardContent className="p-0">
+            <div className="w-full overflow-x-auto max-h-[500px]">
+              <Table className="w-full text-xs">
+                <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm shadow-sm">
+                  <TableRow className="border-b border-border/40 hover:bg-transparent">
+                    <TableHead className="sticky left-0 bg-background/95 backdrop-blur-sm w-12 font-semibold text-muted-foreground">#</TableHead>
                     {previewColumns.map((col) => (
-                      <TableHead key={col} className="truncate whitespace-nowrap">
+                      <TableHead key={col} className="truncate whitespace-nowrap font-semibold text-foreground px-4 py-3">
                         {col}
                       </TableHead>
                     ))}
@@ -270,18 +245,18 @@ export default function Page() {
                 </TableHeader>
                 <TableBody>
                   {dataPreview.map((row, rowIdx) => (
-                    <TableRow key={rowIdx}>
-                      <TableCell className="sticky left-0 bg-card w-10 font-medium text-sm text-muted-foreground">
+                    <TableRow key={rowIdx} className="border-b border-border/20 transition-colors odd:bg-muted/10 hover:bg-primary/5">
+                      <TableCell className="sticky left-0 bg-background/90 font-medium text-xs text-muted-foreground w-12 border-r border-border/20">
                         {rowIdx + 1}
                       </TableCell>
                       {previewColumns.map((col) => {
                         const cellValue = row[col];
                         return (
-                          <TableCell key={col} className="truncate text-sm" title={String(cellValue)}>
+                          <TableCell key={col} className="max-w-48 truncate px-4 py-2.5 text-foreground/80" title={String(cellValue ?? "")}>
                             {isMissingValue(cellValue) ? (
                               <Badge
                                 variant="outline"
-                                className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
+                                className="border-destructive/30 bg-destructive/10 text-destructive text-[10px] py-0 px-1.5 font-semibold"
                               >
                                 NaN
                               </Badge>
@@ -302,4 +277,3 @@ export default function Page() {
     </div>
   );
 }
-
